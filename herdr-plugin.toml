@@ -1,0 +1,26 @@
+id = "wataru-toriumi.factory-board"
+name = "Factory Board"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Run manual and scheduled Codex tasks from a workspace board."
+platforms = ["macos", "linux"]
+
+[[build]]
+command = ["go", "build", "-o", "factory-board", "./src"]
+
+[[panes]]
+id = "board"
+title = "Factory Board"
+command = ["./factory-board"]
+
+[[panes]]
+id = "scheduler"
+title = "Factory Board Scheduler"
+placement = "tab"
+command = ["./factory-board", "scheduler"]
+
+[[panes]]
+id = "worker"
+title = "Factory Board Worker"
+placement = "tab"
+command = ["./factory-board", "worker"]
