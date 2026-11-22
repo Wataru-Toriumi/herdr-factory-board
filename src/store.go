@@ -14,11 +14,14 @@ import (
 )
 
 const (
-	todo     = "Todo"
-	starting = "Starting"
-	running  = "In Progress"
-	done     = "Done"
-	failed   = "Failed"
+	todo                 = "Todo"
+	starting             = "Starting"
+	running              = "In Progress"
+	awaitingReview       = "Awaiting Design Review"
+	awaitingResultReview = "Awaiting Result Review"
+	done                 = "Done"
+	failed               = "Failed"
+	canceled             = "Canceled"
 )
 
 type card struct {
@@ -26,7 +29,28 @@ type card struct {
 	Prompt, Dir, Status, Source string
 	Attempt                     int
 	Pane, Result                string
-	ScheduleID                  int `json:",omitempty"`
+	ScheduleID                  int    `json:",omitempty"`
+	Phase                       string `json:",omitempty"`
+	Design                      string `json:",omitempty"`
+	Feedback                    string `json:",omitempty"`
+}
+
+func (c card) canCancel() bool {
+	switch c.Status {
+	case todo, starting, running, awaitingReview, awaitingResultReview, failed:
+		return true
+	}
+	return false
+}
+
+func cancelCard(s store, seen card) error {
+	return s.editCard(seen.ID, func(c *card) error {
+		if c.Attempt != seen.Attempt || c.Status != seen.Status || !c.canCancel() {
+			return errors.New("カードが更新されました。最新の状態を確認してください")
+		}
+		c.Status = canceled
+		return nil
+	})
 }
 
 func (c card) sourceScheduleID() int {

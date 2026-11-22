@@ -24,6 +24,21 @@ func TestCardSelectionFollowsWorkerAcrossColumns(t *testing.T) {
 	}
 }
 
+func TestFailedAndCanceledCardsShareLane(t *testing.T) {
+	u := newBoardUI(store{t.TempDir()}, "")
+	u.renderTasks([]card{{ID: 1, Status: failed, Source: "定期 #3"}, {ID: 2, Status: canceled}})
+	list := u.lists[failedOrCanceledLane]
+	if list.GetItemCount() != 2 {
+		t.Fatalf("失敗・中止のカード数 = %d", list.GetItemCount())
+	}
+	for i, want := range []string{"失敗", "キャンセル済み"} {
+		_, label := list.GetItemText(i)
+		if !strings.HasPrefix(label, want) {
+			t.Fatalf("カードの状態表示 = %q, 期待値 = %q", label, want)
+		}
+	}
+}
+
 func TestRefreshPreservesActiveView(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -54,7 +69,7 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 				t.Fatal("カードの列移動で操作中の画面からフォーカスが外れました")
 			}
 			u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
-			if u.app.GetFocus() != u.lists[cardLane(running)] {
+			if u.app.GetFocus() != u.lists[workLane] {
 				t.Fatal("Esc で進行中のカードに戻れませんでした")
 			}
 		})
@@ -259,7 +274,9 @@ func TestTimingFromTaskDetail(t *testing.T) {
 		t.Fatalf("保存後のタスク詳細: %s", text)
 	}
 	press(tcell.KeyEscape)
-	press(tcell.KeyRight)
+	for i := todoLane; i < workLane; i++ {
+		press(tcell.KeyRight)
+	}
 	key('v')
 	key('t')
 	u.input.SetText("30m")

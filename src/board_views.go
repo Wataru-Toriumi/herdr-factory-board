@@ -8,11 +8,29 @@ import (
 	"github.com/rivo/tview"
 )
 
+func cardListLabel(c card, lane int) string {
+	label := fmt.Sprintf("#%d", c.ID)
+	if c.Source != "" {
+		label += "  " + c.Source
+	}
+	if c.Status == starting {
+		label += "  起動中"
+	}
+	phase := c.phaseLabel()
+	if phase == "" {
+		return label
+	}
+	if lane == failedOrCanceledLane {
+		return phase + "  " + label
+	}
+	return label + "  " + phase
+}
+
 // 自動更新時は、選択中のカード番号を使って移動先の列と行を復元する。
 func (u *boardUI) renderTasks(cards []card) {
 	groups := make([][]card, len(laneNames))
 	for _, c := range cards {
-		if i := cardLane(c.Status); i >= 0 {
+		if i := cardLane(c); i >= 0 {
 			groups[i] = append(groups[i], c)
 		}
 	}
@@ -23,14 +41,7 @@ func (u *boardUI) renderTasks(cards []card) {
 			index := list.GetCurrentItem()
 			list.Clear()
 			for j, c := range group {
-				label := fmt.Sprintf("#%d", c.ID)
-				if c.Source != "" {
-					label += "  " + c.Source
-				}
-				if c.Status == starting {
-					label += "  起動中"
-				}
-				list.AddItem(tview.Escape(c.Prompt), tview.Escape(label), 0, nil)
+				list.AddItem(tview.Escape(c.Prompt), tview.Escape(cardListLabel(c, i)), 0, nil)
 				if selected.ID == c.ID {
 					index = j
 					if u.lane != i {
