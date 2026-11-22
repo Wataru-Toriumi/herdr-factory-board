@@ -50,6 +50,9 @@ type boardUI struct {
 	input                                 *tview.InputField
 	footer                                *tview.Pages
 	workDir                               string
+	editingScheduleID                     int
+	detailScheduleID                      int
+	detailBody                            string
 	spaces                                []workspace
 	tab                                   int
 	lane                                  int
@@ -147,6 +150,9 @@ func (u *boardUI) activePage() string {
 }
 
 func (u *boardUI) switchView() {
+	u.editingScheduleID = 0
+	u.detailScheduleID = 0
+	u.detailBody = ""
 	u.footer.SwitchToPage("keys")
 	switch u.tab {
 	case agentTab:
@@ -156,11 +162,11 @@ func (u *boardUI) switchView() {
 	case automationTab:
 		u.pages.SwitchToPage("automation")
 		u.app.SetFocus(u.schedules)
-		u.hint.SetText("n 毎日  i 間隔  p 作業先  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
+		u.hint.SetText("n 毎日  i 間隔  t 変更  p 作業先  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
 	default:
 		u.pages.SwitchToPage("tasks")
 		u.app.SetFocus(u.lists[u.lane])
-		u.hint.SetText("n 追加  p 作業先  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる")
+		u.hint.SetText("v 詳細  n 追加  p 作業先  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる")
 	}
 	u.updateHeader()
 }
@@ -186,6 +192,9 @@ func (u *boardUI) refresh() {
 	active, err := schedulerRunning(u.store)
 	u.workDir = b.Dir
 	u.schedules.render(b.Schedules, active, err)
+	if u.activePage() == "detail" && u.detailScheduleID != 0 {
+		u.updateDetailTiming()
+	}
 	u.renderTasks(b.Cards)
 	if err != nil {
 		u.notice.SetText(err.Error())

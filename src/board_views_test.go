@@ -1,7 +1,9 @@
 package main
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -159,5 +161,131 @@ func TestAutomationTabIntervalShortcut(t *testing.T) {
 	text, _ := u.schedules.GetItemText(0)
 	if text != "5分おき  変更を確認する" {
 		t.Fatalf("一覧の予定: %s", text)
+	}
+}
+
+func TestEditIntervalFromAutomationTab(t *testing.T) {
+	s := store{t.TempDir()}
+	original := time.Now().Add(time.Minute)
+	if err := s.edit(func(b *board) error {
+		b.NextID = 3
+		b.Cards = []card{{ID: 3, Prompt: "履歴", Status: done}}
+		b.Schedules = []schedule{
+			{ID: 1, Time: "09:00"},
+			{ID: 2, Prompt: "差分の確認", Dir: s.dir, Interval: &scheduleInterval{Minutes: 1, NextRun: original}},
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.refresh()
+	press := func(key tcell.Key) { u.key(tcell.NewEventKey(key, 0, 0)) }
+	edit := func() { u.key(tcell.NewEventKey(tcell.KeyRune, 't', 0)) }
+	press(tcell.KeyBacktab)
+	u.schedules.SetCurrentItem(1)
+	edit()
+	if u.input.GetText() != "1m" {
+		t.Fatal("現在の間隔が入力欄にありません")
+	}
+	u.input.SetText("30m")
+	press(tcell.KeyEscape)
+	edit()
+	if u.input.GetText() != "1m" {
+		t.Fatal("キャンセルした変更が保存されました")
+	}
+	u.input.SetText("0m")
+	press(tcell.KeyEnter)
+	if u.activePage() != "input" || u.notice.GetText(false) == "" {
+		t.Fatal("入力エラーを修正できません")
+	}
+	// 編集中に先頭の予定が消えても、保存対象は同じ番号の予定。
+	if _, err := command(s, "true", "remove 1"); err != nil {
+		t.Fatal(err)
+	}
+	u.refresh()
+	before := time.Now()
+	u.input.SetText("15m")
+	press(tcell.KeyEnter)
+	b, err := s.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Schedules) != 1 || len(b.Cards) != 1 || b.Cards[0].ID != 3 || b.NextID != 3 {
+		t.Fatalf("更新後の履歴: %+v", b)
+	}
+	r := b.Schedules[0]
+	if u.activePage() != "automation" || r.ID != 2 || r.Prompt != "差分の確認" || r.Dir != s.dir || r.Interval.Minutes != 15 {
+		t.Fatalf("更新後の予定: %+v", r)
+	}
+	if r.Interval.NextRun.Before(before.Add(15*time.Minute)) || r.Interval.NextRun.After(time.Now().Add(15*time.Minute)) || due(r, original) {
+		t.Fatalf("次回の実行時刻: %v", r.Interval.NextRun)
+	}
+	edit()
+	press(tcell.KeyEnter)
+	same, ok := u.schedules.selected()
+	if !ok || !same.Interval.NextRun.Equal(r.Interval.NextRun) {
+		t.Fatal("同じ間隔で確定すると実行時刻がずれました")
+	}
+}
+
+func TestTimingFromTaskDetail(t *testing.T) {
+	s := store{t.TempDir()}
+	if err := s.edit(func(b *board) error {
+		b.NextID = 5
+		b.Schedules = []schedule{{ID: 1, Time: "08:00"}, {ID: 2, Interval: &scheduleInterval{Minutes: 1}}}
+		b.Cards = []card{
+			{ID: 3, Status: done, Source: "定期 #2 2026-11-23 10:00", Result: "実行結果"},
+			{ID: 4, Status: running, ScheduleID: 2},
+			{ID: 5, Status: todo},
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.refresh()
+	press := func(k tcell.Key) { u.key(tcell.NewEventKey(k, 0, 0)) }
+	key := func(r rune) { u.key(tcell.NewEventKey(tcell.KeyRune, r, 0)) }
+	// 一覧の選択とは異なるカードを、番号指定で開く。
+	u.execute("result 3")
+	key('t')
+	if u.activePage() != "input" || u.input.GetText() != "1m" {
+		t.Fatal("古いカードの履歴から元の予定を選べません")
+	}
+	u.input.SetText("15m")
+	press(tcell.KeyEnter)
+	if text := u.detail.GetText(false); u.activePage() != "detail" || !strings.Contains(text, "15分おき") || !strings.Contains(text, "実行結果") {
+		t.Fatalf("保存後のタスク詳細: %s", text)
+	}
+	press(tcell.KeyEscape)
+	press(tcell.KeyRight)
+	key('v')
+	key('t')
+	u.input.SetText("30m")
+	press(tcell.KeyEscape)
+	if text := u.detail.GetText(false); u.activePage() != "detail" || !strings.Contains(text, "#4") || !strings.Contains(text, "15分おき") {
+		t.Fatalf("取り消し後のタスク詳細: %s", text)
+	}
+	if _, err := command(s, "true", "remove 2"); err != nil {
+		t.Fatal(err)
+	}
+	u.refresh()
+	key('t')
+	if u.activePage() != "detail" || !strings.Contains(u.detail.GetText(false), "解除済み") {
+		t.Fatal("解除済みの予定が編集対象になりました")
+	}
+	u.execute("result 5")
+	key('t')
+	if u.activePage() != "detail" || strings.Contains(u.hint.GetText(false), "設定変更") {
+		t.Fatal("手動タスクに定期実行の編集操作が表示されました")
+	}
+
+	press(tcell.KeyEscape)
+	press(tcell.KeyBacktab)
+	press(tcell.KeyEnter)
+	key('t')
+	if u.input.GetText() != "08:00" {
+		t.Fatal("自動化タブの詳細から時刻を編集できません")
 	}
 }

@@ -101,6 +101,15 @@ type scheduleList struct {
 	rules []schedule
 }
 
+func (l *scheduleList) byID(id int) (schedule, bool) {
+	for _, r := range l.rules {
+		if r.ID == id {
+			return r, true
+		}
+	}
+	return schedule{}, false
+}
+
 func (l *scheduleList) selected() (schedule, bool) {
 	i := l.GetCurrentItem()
 	if i < 0 || i >= len(l.rules) {
