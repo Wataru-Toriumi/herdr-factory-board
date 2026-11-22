@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -26,6 +27,14 @@ func cardLane(status string) int {
 	}
 }
 
+const (
+	taskTab = iota
+	agentTab
+	automationTab
+)
+
+var tabLabels = [...]string{"タスク", "エージェント", "自動化"}
+
 type boardUI struct {
 	app                                   *tview.Application
 	store                                 store
@@ -35,15 +44,16 @@ type boardUI struct {
 	lists                                 []*tview.List
 	cards                                 [][]card
 	agents                                *tview.List
+	schedules                             *scheduleList
 	rows                                  []agentRow
 	header, context, hint, notice, detail *tview.TextView
 	input                                 *tview.InputField
 	footer                                *tview.Pages
-	board                                 board
+	workDir                               string
 	spaces                                []workspace
-	scheduler                             bool
+	tab                                   int
 	lane                                  int
-	compact, agentView                    bool
+	compact                               bool
 }
 
 func boardList() *tview.List {
@@ -56,20 +66,21 @@ func boardList() *tview.List {
 
 func newBoardUI(s store, herdr string) *boardUI {
 	u := &boardUI{
-		app:     tview.NewApplication(),
-		store:   s,
-		herdr:   herdr,
-		pages:   tview.NewPages(),
-		columns: tview.NewFlex(),
-		header:  tview.NewTextView().SetDynamicColors(true),
-		context: tview.NewTextView().SetWrap(false),
-		detail:  tview.NewTextView().SetScrollable(true).SetWordWrap(true),
-		notice:  tview.NewTextView().SetWrap(false),
-		hint:    tview.NewTextView().SetWrap(false),
-		input:   tview.NewInputField().SetLabel("> "),
-		footer:  tview.NewPages(),
-		agents:  boardList(),
-		cards:   make([][]card, len(laneNames)),
+		app:       tview.NewApplication(),
+		store:     s,
+		herdr:     herdr,
+		pages:     tview.NewPages(),
+		columns:   tview.NewFlex(),
+		header:    tview.NewTextView().SetDynamicColors(true),
+		context:   tview.NewTextView().SetWrap(false),
+		detail:    tview.NewTextView().SetScrollable(true).SetWordWrap(true),
+		notice:    tview.NewTextView().SetWrap(false),
+		hint:      tview.NewTextView().SetWrap(false),
+		input:     tview.NewInputField().SetLabel("> "),
+		footer:    tview.NewPages(),
+		agents:    boardList(),
+		schedules: &scheduleList{List: boardList()},
+		cards:     make([][]card, len(laneNames)),
 	}
 	for _, color := range laneColors {
 		l := boardList()
@@ -79,7 +90,7 @@ func newBoardUI(s store, herdr string) *boardUI {
 	u.layoutColumns()
 	u.agents.SetTitle(" エージェント ").SetTitleAlign(tview.AlignLeft)
 	u.detail.SetBorder(true).SetTitleAlign(tview.AlignLeft)
-	u.pages.AddPage("tasks", u.columns, true, true).AddPage("agents", u.agents, true, false).AddPage("detail", u.detail, true, false)
+	u.pages.AddPage("tasks", u.columns, true, true).AddPage("agents", u.agents, true, false).AddPage("automation", u.schedules, true, false).AddPage("detail", u.detail, true, false)
 	u.footer.AddPage("keys", u.hint, true, true).AddPage("input", u.input, true, false)
 	root := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(u.header, 1, 0, false).AddItem(u.context, 1, 0, false).
@@ -137,11 +148,16 @@ func (u *boardUI) activePage() string {
 
 func (u *boardUI) switchView() {
 	u.footer.SwitchToPage("keys")
-	if u.agentView {
+	switch u.tab {
+	case agentTab:
 		u.pages.SwitchToPage("agents")
 		u.app.SetFocus(u.agents)
-		u.hint.SetText("Tab タスク   ↑↓ 選択   Enter ペインへ   ? ヘルプ   q 閉じる")
-	} else {
+		u.hint.SetText("Tab 切替   ↑↓ 選択   Enter ペインへ   ? ヘルプ   q 閉じる")
+	case automationTab:
+		u.pages.SwitchToPage("automation")
+		u.app.SetFocus(u.schedules)
+		u.hint.SetText("n 登録  p 作業先  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
+	default:
 		u.pages.SwitchToPage("tasks")
 		u.app.SetFocus(u.lists[u.lane])
 		u.hint.SetText("n 追加  p 作業先  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる")
@@ -156,11 +172,9 @@ func (u *boardUI) updateHeader() {
 			blocked++
 		}
 	}
-	tabs := "[black:aqua:b] タスク [-:-:-]  エージェント"
-	if u.agentView {
-		tabs = "タスク  [black:aqua:b] エージェント [-:-:-]"
-	}
-	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", tabs, blocked))
+	labels := tabLabels
+	labels[u.tab] = "[black:aqua:b] " + labels[u.tab] + " [-:-:-]"
+	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", strings.Join(labels[:], "  "), blocked))
 }
 
 func (u *boardUI) refresh() {
@@ -169,9 +183,10 @@ func (u *boardUI) refresh() {
 		u.notice.SetText(err.Error())
 		return
 	}
-	u.board = b
+	active, err := schedulerRunning(u.store)
+	u.workDir = b.Dir
+	u.schedules.render(b.Schedules, active, err)
 	u.renderTasks(b.Cards)
-	u.scheduler, err = schedulerRunning(u.store)
 	if err != nil {
 		u.notice.SetText(err.Error())
 	}
@@ -204,9 +219,9 @@ func (u *boardUI) showWorkDir() {
 	if u.activePage() == "directory" {
 		return
 	}
-	if u.board.Dir == "" {
+	if u.workDir == "" {
 		u.context.SetText("p で作業先を選択")
 	} else {
-		u.context.SetText("作業先: " + u.board.Dir)
+		u.context.SetText("作業先: " + u.workDir)
 	}
 }

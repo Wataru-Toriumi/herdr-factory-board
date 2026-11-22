@@ -95,3 +95,43 @@ func (u *boardUI) renderAgents(rows []agentRow) {
 	}
 	u.updateHeader()
 }
+
+type scheduleList struct {
+	*tview.List
+	rules []schedule
+}
+
+func (l *scheduleList) selected() (schedule, bool) {
+	i := l.GetCurrentItem()
+	if i < 0 || i >= len(l.rules) {
+		return schedule{}, false
+	}
+	return l.rules[i], true
+}
+
+func (l *scheduleList) render(rules []schedule, active bool, err error) {
+	state := "停止中"
+	if err != nil {
+		state = "状態不明"
+	} else if active {
+		state = "稼働中"
+	}
+	l.SetTitle(fmt.Sprintf(" 定期実行 %d件 · %s ", len(rules), state))
+	if reflect.DeepEqual(l.rules, rules) {
+		return
+	}
+
+	selected, _ := l.selected()
+	index := l.GetCurrentItem()
+	l.Clear()
+	for i, r := range rules {
+		l.AddItem(tview.Escape(fmt.Sprintf("毎日 %s  %s", r.Time, r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
+		if r.ID == selected.ID {
+			index = i
+		}
+	}
+	if len(rules) > 0 {
+		l.SetCurrentItem(min(max(0, index), len(rules)-1))
+	}
+	l.rules = rules
+}
