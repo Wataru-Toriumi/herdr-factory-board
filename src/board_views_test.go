@@ -54,7 +54,7 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 				t.Fatal("カードの列移動で操作中の画面からフォーカスが外れました")
 			}
 			u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
-			if u.app.GetFocus() != u.lists[cardLane(running)] {
+			if u.app.GetFocus() != u.lists[workLane] {
 				t.Fatal("Esc で進行中のカードに戻れませんでした")
 			}
 		})
@@ -259,7 +259,9 @@ func TestTimingFromTaskDetail(t *testing.T) {
 		t.Fatalf("保存後のタスク詳細: %s", text)
 	}
 	press(tcell.KeyEscape)
-	press(tcell.KeyRight)
+	for i := todoLane; i < workLane; i++ {
+		press(tcell.KeyRight)
+	}
 	key('v')
 	key('t')
 	u.input.SetText("30m")

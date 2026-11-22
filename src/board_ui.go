@@ -9,19 +9,36 @@ import (
 	"github.com/rivo/tview"
 )
 
-var laneNames = []string{"未着手", "進行中", "完了", "失敗"}
-var laneColors = []tcell.Color{tcell.ColorLightSkyBlue, tcell.ColorGold, tcell.ColorLightGreen, tcell.ColorLightCoral}
+const (
+	todoLane = iota
+	designLane
+	designCompleteLane
+	workLane
+	reviewLane
+	doneLane
+	failedLane
+)
 
-func cardLane(status string) int {
-	switch status {
+var laneNames = [...]string{"未着手", "設計中", "設計完了", "進行中", "レビュー中", "完了", "失敗"}
+var laneColors = [...]tcell.Color{tcell.ColorLightSkyBlue, tcell.ColorPlum, tcell.ColorLavender, tcell.ColorGold, tcell.ColorLightCyan, tcell.ColorLightGreen, tcell.ColorLightCoral}
+
+func cardLane(c card) int {
+	switch c.Status {
 	case todo:
-		return 0
+		return todoLane
+	case awaitingReview:
+		return designCompleteLane
 	case starting, running:
-		return 1
+		if c.Phase == designPhase {
+			return designLane
+		}
+		return workLane
+	case awaitingResultReview:
+		return reviewLane
 	case done:
-		return 2
+		return doneLane
 	case failed:
-		return 3
+		return failedLane
 	default:
 		return -1
 	}
@@ -53,6 +70,8 @@ type boardUI struct {
 	editingScheduleID                     int
 	detailScheduleID                      int
 	detailBody                            string
+	detailCard                            *card
+	editingFeedback                       bool
 	spaces                                []workspace
 	tab                                   int
 	lane                                  int
@@ -101,7 +120,7 @@ func newBoardUI(s store, herdr string) *boardUI {
 	u.app.SetRoot(root, true).SetInputCapture(u.key)
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		width, _ := screen.Size()
-		if narrow := width < 68; narrow != u.compact {
+		if narrow := width < 17*len(laneNames); narrow != u.compact {
 			u.compact = narrow
 			u.layoutColumns()
 		}
@@ -153,6 +172,8 @@ func (u *boardUI) switchView() {
 	u.editingScheduleID = 0
 	u.detailScheduleID = 0
 	u.detailBody = ""
+	u.detailCard = nil
+	u.editingFeedback = false
 	u.footer.SwitchToPage("keys")
 	switch u.tab {
 	case agentTab:
@@ -192,7 +213,12 @@ func (u *boardUI) refresh() {
 	active, err := schedulerRunning(u.store)
 	u.workDir = b.Dir
 	u.schedules.render(b.Schedules, active, err)
-	if u.activePage() == "detail" && u.detailScheduleID != 0 {
+	if u.activePage() == "detail" {
+		if u.detailCard != nil {
+			if c, err := b.find(u.detailCard.ID); err == nil && *c != *u.detailCard {
+				u.renderCardDetail(*c)
+			}
+		}
 		u.updateDetailTiming()
 	}
 	u.renderTasks(b.Cards)

@@ -14,11 +14,13 @@ import (
 )
 
 const (
-	todo     = "Todo"
-	starting = "Starting"
-	running  = "In Progress"
-	done     = "Done"
-	failed   = "Failed"
+	todo                 = "Todo"
+	starting             = "Starting"
+	running              = "In Progress"
+	awaitingReview       = "Awaiting Design Review"
+	awaitingResultReview = "Awaiting Result Review"
+	done                 = "Done"
+	failed               = "Failed"
 )
 
 type card struct {
@@ -26,7 +28,10 @@ type card struct {
 	Prompt, Dir, Status, Source string
 	Attempt                     int
 	Pane, Result                string
-	ScheduleID                  int `json:",omitempty"`
+	ScheduleID                  int    `json:",omitempty"`
+	Phase                       string `json:",omitempty"`
+	Design                      string `json:",omitempty"`
+	Feedback                    string `json:",omitempty"`
 }
 
 func (c card) sourceScheduleID() int {

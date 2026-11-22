@@ -12,7 +12,7 @@ import (
 func (u *boardUI) renderTasks(cards []card) {
 	groups := make([][]card, len(laneNames))
 	for _, c := range cards {
-		if i := cardLane(c.Status); i >= 0 {
+		if i := cardLane(c); i >= 0 {
 			groups[i] = append(groups[i], c)
 		}
 	}
@@ -29,6 +29,9 @@ func (u *boardUI) renderTasks(cards []card) {
 				}
 				if c.Status == starting {
 					label += "  起動中"
+				}
+				if phase := c.phaseLabel(); phase != "" {
+					label += "  " + phase
 				}
 				list.AddItem(tview.Escape(c.Prompt), tview.Escape(label), 0, nil)
 				if selected.ID == c.ID {

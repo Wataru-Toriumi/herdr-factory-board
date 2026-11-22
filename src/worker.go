@@ -12,10 +12,19 @@ import (
 )
 
 func startCard(s store, herdr string, id int) error {
-	var attempt int
-	err := s.editCard(id, func(c *card) error {
+	return launchCard(s, herdr, id, func(c *card) error {
 		if c.Status != todo && c.Status != failed {
 			return fmt.Errorf("#%d は %s です", id, c.Status)
+		}
+		return nil
+	})
+}
+
+func launchCard(s store, herdr string, id int, prepare func(*card) error) error {
+	var attempt int
+	err := s.editCard(id, func(c *card) error {
+		if err := prepare(c); err != nil {
+			return err
 		}
 		c.Attempt++
 		attempt = c.Attempt
@@ -69,15 +78,30 @@ func runWorker(s store) error {
 	defer os.Remove(resultPath)
 	status, result := runCodex(task, resultPath)
 	return s.editCard(id, func(c *card) error {
+		if c.Attempt != attempt || c.Status != running {
+			return nil
+		}
 		c.Status, c.Result = status, result
+		if status == done {
+			switch task.Phase {
+			case designPhase:
+				c.Design, c.Status, c.Result = result, awaitingReview, ""
+			case implementationPhase:
+				c.Status = awaitingResultReview
+			}
+		}
 		return nil
 	})
 }
 
 func runCodex(task card, resultPath string) (status, result string) {
-	cmd := exec.Command("codex", "exec", "--output-last-message", resultPath, "-")
+	args := []string{"exec", "--output-last-message", resultPath}
+	if task.Phase == designPhase {
+		args = append(args, "--sandbox", "read-only")
+	}
+	cmd := exec.Command( "codex", append(args, "-")...)
 	cmd.Dir = task.Dir
-	cmd.Stdin = strings.NewReader(task.Prompt)
+	cmd.Stdin = strings.NewReader(task.workerPrompt())
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	runErr := cmd.Run()
 	msg, readErr := os.ReadFile(resultPath)
@@ -86,6 +110,9 @@ func runCodex(task card, resultPath string) (status, result string) {
 		return failed, strings.TrimSpace(result + "\n" + runErr.Error())
 	}
 	if readErr != nil || result == "" {
+		if task.Phase == designPhase {
+			return failed, "設計案を取得できませんでした"
+		}
 		return done, "終了コード 0（最終メッセージなし）"
 	}
 	return done, result
