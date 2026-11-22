@@ -125,7 +125,7 @@ func (l *scheduleList) render(rules []schedule, active bool, err error) {
 	index := l.GetCurrentItem()
 	l.Clear()
 	for i, r := range rules {
-		l.AddItem(tview.Escape(fmt.Sprintf("毎日 %s  %s", r.Time, r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
+		l.AddItem(tview.Escape(fmt.Sprintf("%s  %s", r.frequency(), r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
 		if r.ID == selected.ID {
 			index = i
 		}

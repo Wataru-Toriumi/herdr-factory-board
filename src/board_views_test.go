@@ -138,3 +138,26 @@ func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
 		t.Fatalf("更新後の解除コマンド = %q", got)
 	}
 }
+
+func TestAutomationTabIntervalShortcut(t *testing.T) {
+	s := store{t.TempDir()}
+	if err := setWorkDir(s, s.dir); err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.refresh()
+	u.key(tcell.NewEventKey(tcell.KeyBacktab, 0, 0))
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
+	if u.input.GetText() != "every " || u.activePage() != "input" {
+		t.Fatal("間隔指定の入力を開始できません")
+	}
+	u.input.SetText(u.input.GetText() + "5m 変更を確認する")
+	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	if u.schedules.GetItemCount() != 1 {
+		t.Fatal("登録した予定が表示されません")
+	}
+	text, _ := u.schedules.GetItemText(0)
+	if text != "5分おき  変更を確認する" {
+		t.Fatalf("一覧の予定: %s", text)
+	}
+}

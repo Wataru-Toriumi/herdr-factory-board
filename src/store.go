@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 const (
@@ -28,6 +29,12 @@ type card struct {
 type schedule struct {
 	ID                          int
 	Time, Prompt, Dir, LastDate string
+	Interval                    *scheduleInterval `json:",omitempty"`
+}
+
+type scheduleInterval struct {
+	Minutes int64
+	NextRun time.Time
 }
 
 type board struct {
