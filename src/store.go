@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -24,6 +26,24 @@ type card struct {
 	Prompt, Dir, Status, Source string
 	Attempt                     int
 	Pane, Result                string
+	ScheduleID                  int `json:",omitempty"`
+}
+
+func (c card) sourceScheduleID() int {
+	if c.ScheduleID != 0 {
+		return c.ScheduleID
+	}
+	// 予定番号を独立して保存する前のカードでは、履歴の先頭に「定期 #番号」がある。
+	source, ok := strings.CutPrefix(c.Source, "定期 #")
+	if !ok {
+		return 0
+	}
+	number, _, _ := strings.Cut(source, " ")
+	id, err := strconv.Atoi(number)
+	if err != nil || id < 1 {
+		return 0
+	}
+	return id
 }
 
 type schedule struct {
@@ -44,9 +64,10 @@ type board struct {
 	Schedules []schedule
 }
 
-func (b *board) newCard(prompt, dir, source string) {
+func (b *board) newCard(prompt, dir, source string) *card {
 	b.NextID++
 	b.Cards = append(b.Cards, card{ID: b.NextID, Prompt: prompt, Dir: dir, Source: source, Status: todo})
+	return &b.Cards[len(b.Cards)-1]
 }
 
 func (b *board) find(id int) (*card, error) {

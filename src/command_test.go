@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -13,9 +12,9 @@ func TestAddAndResultCommands(t *testing.T) {
 	if _, err := command(s, "false", "add 手動タスク"); err != nil {
 		t.Fatal(err)
 	}
-	text, err := command(s, "false", "result 1")
-	if want := fmt.Sprintf("#1  Todo  %s\n手動タスク\n", s.dir); err != nil || text != want {
-		t.Fatalf("result = %q, %v; want %q", text, err, want)
+	c, err := command(s, "false", "result 1")
+	if err != nil || c == nil || c.ID != 1 || c.Status != todo || c.Dir != s.dir || c.Prompt != "手動タスク" || c.Result != "" {
+		t.Fatalf("結果のカード = %+v, %v", c, err)
 	}
 }
 

@@ -23,19 +23,19 @@ func setWorkDir(s store, path string) error {
 	return s.edit(func(b *board) error { b.Dir = filepath.Clean(path); return nil })
 }
 
-func command(s store, herdr, line string) (string, error) {
+func command(s store, herdr, line string) (*card, error) {
 	name, arg, _ := strings.Cut(strings.TrimSpace(line), " ")
 	arg = strings.TrimSpace(arg)
 	switch name {
 	case "":
-		return "", nil
+		return nil, nil
 	case "dir":
-		return "", setWorkDir(s, arg)
+		return nil, setWorkDir(s, arg)
 	case "add":
 		if arg == "" {
-			return "", errors.New("作業内容を入力してください")
+			return nil, errors.New("作業内容を入力してください")
 		}
-		return "", s.edit(func(b *board) error {
+		return nil, s.edit(func(b *board) error {
 			if b.Dir == "" {
 				return errors.New("先に dir で作業先を指定してください")
 			}
@@ -43,33 +43,29 @@ func command(s store, herdr, line string) (string, error) {
 			return nil
 		})
 	case "daily", "every":
-		return "", registerSchedule(s, herdr, name, arg)
+		return nil, registerSchedule(s, herdr, name, arg)
 	case "scheduler":
-		return "", ensureScheduler(s, herdr)
+		return nil, ensureScheduler(s, herdr)
 	case "start", "open", "result", "recover", "remove":
 		id, err := strconv.Atoi(arg)
 		if err != nil || id < 1 {
-			return "", errors.New("番号を指定してください")
+			return nil, errors.New("番号を指定してください")
 		}
 		switch name {
 		case "start":
-			return "", startCard(s, herdr, id)
+			return nil, startCard(s, herdr, id)
 		case "open":
-			return "", focusWorker(s, herdr, id)
+			return nil, focusWorker(s, herdr, id)
 		case "recover":
-			return "", recoverCard(s, id)
+			return nil, recoverCard(s, id)
 		case "result":
 			b, err := s.read()
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-			c, err := b.find(id)
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("#%d  %s  %s\n%s\n%s", c.ID, c.Status, c.Dir, c.Prompt, c.Result), nil
+			return b.find(id)
 		case "remove":
-			return "", s.edit(func(b *board) error {
+			return nil, s.edit(func(b *board) error {
 				for i, r := range b.Schedules {
 					if r.ID == id {
 						b.Schedules = append(b.Schedules[:i], b.Schedules[i+1:]...)
@@ -80,7 +76,7 @@ func command(s store, herdr, line string) (string, error) {
 			})
 		}
 	}
-	return "", errors.New("コマンドを確認してください")
+	return nil, errors.New("コマンドを確認してください")
 }
 
 func run() error {
