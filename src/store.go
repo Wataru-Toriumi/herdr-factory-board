@@ -123,3 +123,13 @@ func (s store) edit(change func(*board) error) error {
 	}
 	return os.Rename(f.Name(), filepath.Join(s.dir, "board.json"))
 }
+
+func (s store) editCard(id int, change func(*card) error) error {
+	return s.edit(func(b *board) error {
+		c, err := b.find(id)
+		if err != nil {
+			return err
+		}
+		return change(c)
+	})
+}

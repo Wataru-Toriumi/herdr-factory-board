@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -10,62 +9,18 @@ import (
 	"strings"
 )
 
-func showWorkspaces(herdr string) error {
-	workspaces, err := listWorkspaces(herdr)
+func setWorkDir(s store, path string) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("作業先の絶対パスを指定してください")
+	}
+	info, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
-	fmt.Println("ワークスペース")
-	for _, ws := range workspaces {
-		marker := " "
-		if ws.Focused {
-			marker = "*"
-		}
-		label := ws.Label
-		if label == "" {
-			label = ws.ID
-		}
-		fmt.Printf("%s %s  [%s]\n", marker, label, ws.AgentStatus)
+	if !info.IsDir() {
+		return errors.New("作業先はディレクトリを指定してください")
 	}
-	if len(workspaces) == 0 {
-		fmt.Println("ワークスペースはありません。")
-	}
-	return nil
-}
-
-func showBoard(s store, herdr string) error {
-	b, err := s.read()
-	if err != nil {
-		return err
-	}
-	fmt.Println("Factory Board")
-	if b.Dir == "" {
-		fmt.Println("作業先を設定: dir /path/to/repository")
-	} else {
-		fmt.Println("作業先:", b.Dir)
-	}
-	for _, status := range []string{todo, starting, running, done, failed} {
-		fmt.Printf("\n%s\n", status)
-		for _, c := range b.Cards {
-			if c.Status == status {
-				fmt.Printf("  #%d  %s  %s\n", c.ID, c.Prompt, c.Source)
-			}
-		}
-	}
-	active, err := schedulerRunning(s)
-	if err != nil {
-		return err
-	}
-	state := "停止中"
-	if active {
-		state = "稼働中"
-	}
-	fmt.Printf("\n毎日の定期実行 (%s)\n", state)
-	for _, r := range b.Schedules {
-		fmt.Printf("  #%d  %s  %s\n", r.ID, r.Time, r.Prompt)
-	}
-	fmt.Println()
-	return showWorkspaces(herdr)
+	return s.edit(func(b *board) error { b.Dir = filepath.Clean(path); return nil })
 }
 
 func command(s store, herdr, line string) (string, error) {
@@ -75,17 +30,7 @@ func command(s store, herdr, line string) (string, error) {
 	case "":
 		return "", nil
 	case "dir":
-		if !filepath.IsAbs(arg) {
-			return "", errors.New("作業先の絶対パスを指定してください")
-		}
-		info, err := os.Stat(arg)
-		if err != nil {
-			return "", err
-		}
-		if !info.IsDir() {
-			return "", errors.New("作業先はディレクトリを指定してください")
-		}
-		return "", s.edit(func(b *board) error { b.Dir = filepath.Clean(arg); return nil })
+		return "", setWorkDir(s, arg)
 	case "add":
 		if arg == "" {
 			return "", errors.New("作業内容を入力してください")
@@ -138,32 +83,6 @@ func command(s store, herdr, line string) (string, error) {
 	return "", errors.New("コマンドを確認してください")
 }
 
-func runBoard(s store, herdr string) {
-	input := bufio.NewScanner(os.Stdin)
-	var message string
-	for {
-		fmt.Print("\x1b[2J\x1b[H")
-		if err := showBoard(s, herdr); err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println("\nadd 作業内容 | start 番号 | open 番号 | result 番号")
-		fmt.Println("daily HH:MM 作業内容 | remove 定期番号 | scheduler | recover 番号")
-		fmt.Println("dir 絶対パス | Enter で更新 | q で終了")
-		if message != "" {
-			fmt.Println(message)
-		}
-		fmt.Print("> ")
-		if !input.Scan() || strings.EqualFold(strings.TrimSpace(input.Text()), "q") {
-			return
-		}
-		var err error
-		message, err = command(s, herdr, input.Text())
-		if err != nil {
-			message = err.Error()
-		}
-	}
-}
-
 func run() error {
 	s, err := workspaceStore()
 	if err != nil {
@@ -174,8 +93,7 @@ func run() error {
 		herdr = "herdr"
 	}
 	if len(os.Args) == 1 {
-		runBoard(s, herdr)
-		return nil
+		return runBoard(s, herdr)
 	}
 	switch os.Args[1] {
 	case "worker":

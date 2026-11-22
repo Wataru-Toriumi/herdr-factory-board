@@ -13,11 +13,7 @@ import (
 
 func startCard(s store, herdr string, id int) error {
 	var attempt int
-	err := s.edit(func(b *board) error {
-		c, err := b.find(id)
-		if err != nil {
-			return err
-		}
+	err := s.editCard(id, func(c *card) error {
 		if c.Status != todo && c.Status != failed {
 			return fmt.Errorf("#%d は %s です", id, c.Status)
 		}
@@ -29,17 +25,15 @@ func startCard(s store, herdr string, id int) error {
 	if err != nil {
 		return err
 	}
-	err = openPlugin(herdr, "worker", fmt.Sprintf("FACTORY_CARD=%d", id), fmt.Sprintf("FACTORY_ATTEMPT=%d", attempt))
-	if err == nil {
+	launchErr := openPlugin(herdr, "worker", fmt.Sprintf("FACTORY_CARD=%d", id), fmt.Sprintf("FACTORY_ATTEMPT=%d", attempt))
+	if launchErr == nil {
 		return nil
 	}
-	launchErr := err
-	saveErr := s.edit(func(b *board) error {
-		c, err := b.find(id)
-		if err == nil && c.Attempt == attempt && c.Status == starting {
+	saveErr := s.editCard(id, func(c *card) error {
+		if c.Attempt == attempt && c.Status == starting {
 			c.Status, c.Result = failed, launchErr.Error()
 		}
-		return err
+		return nil
 	})
 	return errors.Join(launchErr, saveErr)
 }
@@ -59,11 +53,7 @@ func runWorker(s store) error {
 	}
 	defer lock.Close()
 	var task card
-	err = s.edit(func(b *board) error {
-		c, err := b.find(id)
-		if err != nil {
-			return err
-		}
+	err = s.editCard(id, func(c *card) error {
 		if c.Attempt != attempt || c.Status != starting {
 			return errors.New("この起動要求は無効です")
 		}
@@ -77,27 +67,28 @@ func runWorker(s store) error {
 	fmt.Printf("#%d  %s\n作業先: %s\n\n", id, task.Prompt, task.Dir)
 	resultPath := filepath.Join(s.dir, fmt.Sprintf(".result-%d-%d", id, attempt))
 	defer os.Remove(resultPath)
+	status, result := runCodex(task, resultPath)
+	return s.editCard(id, func(c *card) error {
+		c.Status, c.Result = status, result
+		return nil
+	})
+}
+
+func runCodex(task card, resultPath string) (status, result string) {
 	cmd := exec.Command("codex", "exec", "--output-last-message", resultPath, "-")
 	cmd.Dir = task.Dir
 	cmd.Stdin = strings.NewReader(task.Prompt)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	runErr := cmd.Run()
 	msg, readErr := os.ReadFile(resultPath)
-	result := strings.TrimSpace(string(msg))
-	status := done
+	result = strings.TrimSpace(string(msg))
 	if runErr != nil {
-		status = failed
-		result = strings.TrimSpace(result + "\n" + runErr.Error())
-	} else if readErr != nil || result == "" {
-		result = "終了コード 0（最終メッセージなし）"
+		return failed, strings.TrimSpace(result + "\n" + runErr.Error())
 	}
-	return s.edit(func(b *board) error {
-		c, err := b.find(id)
-		if err == nil {
-			c.Status, c.Result = status, result
-		}
-		return err
-	})
+	if readErr != nil || result == "" {
+		return done, "終了コード 0（最終メッセージなし）"
+	}
+	return done, result
 }
 
 // ワーカーは実行中、カードごとのロックを保持する。
@@ -111,11 +102,7 @@ func recoverCard(s store, id int) error {
 		return err
 	}
 	defer l.Close()
-	return s.edit(func(b *board) error {
-		c, err := b.find(id)
-		if err != nil {
-			return err
-		}
+	return s.editCard(id, func(c *card) error {
 		if c.Status != starting && c.Status != running {
 			return errors.New("中断した実行だけを復旧できます")
 		}

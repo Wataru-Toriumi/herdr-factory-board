@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type workspace struct {
@@ -16,10 +18,18 @@ type workspace struct {
 	AgentStatus string `json:"agent_status"`
 }
 
+func herdrList(herdr, resource string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, herdr, resource, "list").Output()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return out, err
+}
+
 func listWorkspaces(herdr string) ([]workspace, error) {
-	cmd := exec.Command(herdr, "workspace", "list")
-	cmd.Stderr = os.Stderr
-	output, err := cmd.Output()
+	output, err := herdrList(herdr, "workspace")
 	if err != nil {
 		return nil, err
 	}
