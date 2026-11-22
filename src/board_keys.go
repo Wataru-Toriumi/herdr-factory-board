@@ -23,14 +23,7 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容")
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
 	fmt.Fprintln(&text, "scheduler / remove 定期番号")
-	state := "停止中"
-	if u.scheduler {
-		state = "稼働中"
-	}
-	fmt.Fprintf(&text, "\n毎日の定期実行 (%s)\n", state)
-	for _, r := range u.board.Schedules {
-		fmt.Fprintf(&text, "#%d  %s  %s\n", r.ID, r.Time, r.Prompt)
-	}
+	fmt.Fprintln(&text, "自動化タブでは n で予定を登録、Enter で詳細、x で解除。")
 	fmt.Fprintln(&text, "\nワークスペース")
 	for _, w := range u.spaces {
 		label := w.Label
@@ -39,10 +32,14 @@ func (u *boardUI) help() {
 		}
 		fmt.Fprintf(&text, "%s  %s\n", label, w.AgentStatus)
 	}
-	u.read("操作と定期実行", text.String())
+	u.read("操作方法", text.String())
 }
 
 func (u *boardUI) edit(initial string) {
+	u.input.SetLabel("> ")
+	if initial == "daily " {
+		u.input.SetLabel("時刻 HH:MM と作業内容 > ")
+	}
 	u.input.SetText(initial)
 	u.footer.SwitchToPage("input")
 	u.app.SetFocus(u.input)
@@ -60,7 +57,13 @@ func (u *boardUI) execute(line string) {
 }
 
 func (u *boardUI) activate() {
-	if u.agentView {
+	switch u.tab {
+	case automationTab:
+		if r, ok := u.schedules.selected(); ok {
+			u.read(fmt.Sprintf("定期実行 #%d", r.ID), fmt.Sprintf("毎日 %s\n作業先: %s\n\n%s", r.Time, r.Dir, r.Prompt))
+		}
+		return
+	case agentTab:
 		i := u.agents.GetCurrentItem()
 		if i >= 0 && i < len(u.rows) {
 			if err := u.rows[i].focus(u.store, u.herdr); err != nil {
@@ -113,11 +116,15 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	}
 	switch key {
 	case tcell.KeyTab, tcell.KeyBacktab:
-		u.agentView = !u.agentView
+		step := 1
+		if key == tcell.KeyBacktab {
+			step = -1
+		}
+		u.tab = (u.tab + step + len(tabLabels)) % len(tabLabels)
 		u.notice.SetText("")
 		u.switchView()
 	case tcell.KeyLeft, tcell.KeyRight:
-		if !u.agentView {
+		if u.tab == taskTab {
 			direction := 1
 			if key == tcell.KeyLeft {
 				direction = -1
@@ -130,15 +137,25 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyEnter:
 		u.activate()
 	case tcell.KeyRune:
+		if u.tab == automationTab && event.Rune() == 'x' {
+			if r, ok := u.schedules.selected(); ok {
+				u.edit(fmt.Sprintf("remove %d", r.ID))
+			}
+			return nil
+		}
 		switch event.Rune() {
 		case 'n':
-			if u.board.Dir == "" {
-				u.pickDirectory(true)
+			prefix := "add "
+			if u.tab == automationTab {
+				prefix = "daily "
+			}
+			if u.workDir == "" {
+				u.pickDirectory(prefix)
 			} else {
-				u.edit("add ")
+				u.edit(prefix)
 			}
 		case 'p':
-			u.pickDirectory(false)
+			u.pickDirectory("")
 		case 'q', 'Q':
 			u.app.Stop()
 		case ':':

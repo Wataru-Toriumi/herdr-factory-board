@@ -7,16 +7,16 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (u *boardUI) pickDirectory(addAfter bool) {
-	start := u.board.Dir
+func (u *boardUI) pickDirectory(nextCommand string) {
+	start := u.workDir
 	if start != "" {
-		if err := u.browseDirectory(start, addAfter); err == nil {
+		if err := u.browseDirectory(start, nextCommand); err == nil {
 			return
 		}
 	}
 	home, err := os.UserHomeDir()
 	if err == nil {
-		err = u.browseDirectory(home, addAfter)
+		err = u.browseDirectory(home, nextCommand)
 	}
 	if err != nil {
 		u.notice.SetText(err.Error())
@@ -30,7 +30,7 @@ func (u *boardUI) closeDirectory() {
 	u.switchView()
 }
 
-func (u *boardUI) browseDirectory(path string, addAfter bool) error {
+func (u *boardUI) browseDirectory(path string, nextCommand string) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return err
@@ -43,15 +43,15 @@ func (u *boardUI) browseDirectory(path string, addAfter bool) error {
 			u.notice.SetText(err.Error())
 			return
 		}
-		u.board.Dir = path
+		u.workDir = path
 		u.closeDirectory()
-		if addAfter {
-			u.edit("add ")
+		if nextCommand != "" {
+			u.edit(nextCommand)
 		}
 	})
 
 	open := func(next string) {
-		if err := u.browseDirectory(next, addAfter); err != nil {
+		if err := u.browseDirectory(next, nextCommand); err != nil {
 			u.notice.SetText(err.Error())
 		}
 	}
