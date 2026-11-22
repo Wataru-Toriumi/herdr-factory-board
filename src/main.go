@@ -42,8 +42,8 @@ func command(s store, herdr, line string) (string, error) {
 			b.newCard(arg, b.Dir, "")
 			return nil
 		})
-	case "daily":
-		return "", registerDaily(s, herdr, arg)
+	case "daily", "every":
+		return "", registerSchedule(s, herdr, name, arg)
 	case "scheduler":
 		return "", ensureScheduler(s, herdr)
 	case "start", "open", "result", "recover", "remove":

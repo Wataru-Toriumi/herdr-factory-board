@@ -156,7 +156,7 @@ func (u *boardUI) switchView() {
 	case automationTab:
 		u.pages.SwitchToPage("automation")
 		u.app.SetFocus(u.schedules)
-		u.hint.SetText("n 登録  p 作業先  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
+		u.hint.SetText("n 毎日  i 間隔  p 作業先  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
 	default:
 		u.pages.SwitchToPage("tasks")
 		u.app.SetFocus(u.lists[u.lane])

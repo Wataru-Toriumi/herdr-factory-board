@@ -23,7 +23,7 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容")
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
 	fmt.Fprintln(&text, "scheduler / remove 定期番号")
-	fmt.Fprintln(&text, "自動化タブでは n で予定を登録、Enter で詳細、x で解除。")
+	fmt.Fprintln(&text, "自動化タブでは n で毎日、i で間隔指定（例: every 15m 作業内容）。Enter で詳細、x で解除。")
 	fmt.Fprintln(&text, "\nワークスペース")
 	for _, w := range u.spaces {
 		label := w.Label
@@ -37,12 +37,23 @@ func (u *boardUI) help() {
 
 func (u *boardUI) edit(initial string) {
 	u.input.SetLabel("> ")
-	if initial == "daily " {
+	switch initial {
+	case "daily ":
 		u.input.SetLabel("時刻 HH:MM と作業内容 > ")
+	case "every ":
+		u.input.SetLabel("間隔（例 15m）と作業内容 > ")
 	}
 	u.input.SetText(initial)
 	u.footer.SwitchToPage("input")
 	u.app.SetFocus(u.input)
+}
+
+func (u *boardUI) composeAtWorkDir(prefix string) {
+	if u.workDir == "" {
+		u.pickDirectory(prefix)
+	} else {
+		u.edit(prefix)
+	}
 }
 
 func (u *boardUI) execute(line string) {
@@ -60,7 +71,7 @@ func (u *boardUI) activate() {
 	switch u.tab {
 	case automationTab:
 		if r, ok := u.schedules.selected(); ok {
-			u.read(fmt.Sprintf("定期実行 #%d", r.ID), fmt.Sprintf("毎日 %s\n作業先: %s\n\n%s", r.Time, r.Dir, r.Prompt))
+			u.read(fmt.Sprintf("定期実行 #%d", r.ID), fmt.Sprintf("%s\n作業先: %s\n\n%s", r.frequency(), r.Dir, r.Prompt))
 		}
 		return
 	case agentTab:
@@ -145,14 +156,16 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		switch event.Rune() {
 		case 'n':
-			prefix := "add "
 			if u.tab == automationTab {
-				prefix = "daily "
-			}
-			if u.workDir == "" {
-				u.pickDirectory(prefix)
+				u.composeAtWorkDir("daily ")
 			} else {
-				u.edit(prefix)
+				u.composeAtWorkDir("add ")
+			}
+		case 'i':
+			if u.tab == automationTab {
+				u.composeAtWorkDir("every ")
+			} else {
+				u.edit("i")
 			}
 		case 'p':
 			u.pickDirectory("")

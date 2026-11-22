@@ -40,21 +40,30 @@ func tryAcquireSchedulerLock(s store) (*os.File, error) {
 	return lock, err
 }
 
-func registerDaily(s store, herdr, arg string) error {
-	clock, prompt, _ := strings.Cut(arg, " ")
-	parsed, err := time.Parse("15:04", clock)
-	if err != nil || parsed.Format("15:04") != clock {
-		return errors.New("daily HH:MM 作業内容 の形式で指定してください")
+func registerSchedule(s store, herdr, kind, arg string) error {
+	when, prompt, _ := strings.Cut(arg, " ")
+	rule := schedule{Prompt: strings.TrimSpace(prompt)}
+	if kind == "every" {
+		period, err := time.ParseDuration(when)
+		if err != nil || period < time.Minute || period%time.Minute != 0 {
+			return errors.New("every 15m 作業内容 の形式で、1分単位の間隔を指定してください")
+		}
+		rule.Interval = &scheduleInterval{Minutes: int64(period / time.Minute)}
+	} else {
+		parsed, err := time.Parse("15:04", when)
+		if err != nil || parsed.Format("15:04") != when {
+			return errors.New("daily HH:MM 作業内容 の形式で指定してください")
+		}
+		rule.Time = when
 	}
-	prompt = strings.TrimSpace(prompt)
-	if prompt == "" {
+	if rule.Prompt == "" {
 		return errors.New("作業内容を入力してください")
 	}
 	if err := s.edit(func(b *board) error {
 		if b.Dir == "" {
 			return errors.New("先に dir で作業先を指定してください")
 		}
-		b.addDailySchedule(clock, prompt, time.Now())
+		b.addSchedule(rule, time.Now())
 		return nil
 	}); err != nil {
 		return err
@@ -62,13 +71,26 @@ func registerDaily(s store, herdr, arg string) error {
 	return ensureScheduler(s, herdr)
 }
 
-func (b *board) addDailySchedule(clock, prompt string, now time.Time) {
+func (b *board) addSchedule(r schedule, now time.Time) {
 	b.NextID++
-	r := schedule{ID: b.NextID, Time: clock, Prompt: prompt, Dir: b.Dir}
-	if clock < now.Format("15:04") {
+	r.ID, r.Dir = b.NextID, b.Dir
+	if r.Interval != nil {
+		r.Interval.NextRun = now.Add(r.Interval.period())
+	} else if r.Time < now.Format("15:04") {
 		r.LastDate = now.Format("2006-01-02")
 	}
 	b.Schedules = append(b.Schedules, r)
+}
+
+func (i scheduleInterval) period() time.Duration {
+	return time.Duration(i.Minutes) * time.Minute
+}
+
+func (r schedule) frequency() string {
+	if r.Interval != nil {
+		return fmt.Sprintf("%d分おき", r.Interval.Minutes)
+	}
+	return "毎日 " + r.Time
 }
 
 func ensureScheduler(s store, herdr string) error {
@@ -80,10 +102,25 @@ func ensureScheduler(s store, herdr string) error {
 }
 
 func due(rule schedule, now time.Time) bool {
+	if i := rule.Interval; i != nil {
+		return i.period() > 0 && !i.NextRun.IsZero() && !now.Before(i.NextRun)
+	}
 	return rule.LastDate < now.Format("2006-01-02") && rule.Time <= now.Format("15:04")
 }
 
-// 同じ日の二重実行を防ぐため、実行日の更新と履歴カードの作成を一度の書き込みで行う。
+func (r *schedule) recordOccurrence(now time.Time) string {
+	if i := r.Interval; i != nil {
+		// 休止中に複数回分を過ぎた場合も、登録時刻を基準に直近の一回を記録する。
+		period := i.period()
+		scheduled := now.Add(-(now.Sub(i.NextRun) % period))
+		i.NextRun = scheduled.Add(period)
+		return fmt.Sprintf("定期 #%d %s", r.ID, scheduled.Format("2006-01-02 15:04"))
+	}
+	r.LastDate = now.Format("2006-01-02")
+	return fmt.Sprintf("定期 #%d %s %s", r.ID, r.LastDate, r.Time)
+}
+
+// 同じ予定の二重実行を防ぐため、実行時刻の更新と履歴カードの作成を一度に保存する。
 func tick(s store, herdr string, now time.Time) error {
 	b, err := s.read()
 	if err != nil {
@@ -99,8 +136,7 @@ func tick(s store, herdr string, now time.Time) error {
 			for i := range current.Schedules {
 				r := &current.Schedules[i]
 				if due(*r, now) {
-					r.LastDate = now.Format("2006-01-02")
-					source := fmt.Sprintf("定期 #%d %s %s", r.ID, r.LastDate, r.Time)
+					source := r.recordOccurrence(now)
 					current.newCard(r.Prompt, r.Dir, source)
 				}
 			}
