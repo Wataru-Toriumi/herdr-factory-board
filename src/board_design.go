@@ -34,7 +34,7 @@ func (u *boardUI) renderCardDetail(c card) {
 	case c.canReviewDesign():
 		hint = "a 承認して実装   r コメントして再設計   " + hint
 	}
-	u.hint.SetText(hint)
+	u.setCardHint(hint)
 }
 
 func (u *boardUI) designKey(key rune) bool {

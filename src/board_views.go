@@ -31,7 +31,11 @@ func (u *boardUI) renderTasks(cards []card) {
 					label += "  起動中"
 				}
 				if phase := c.phaseLabel(); phase != "" {
-					label += "  " + phase
+					if i == failedOrCanceledLane {
+						label = phase + "  " + label
+					} else {
+						label += "  " + phase
+					}
 				}
 				list.AddItem(tview.Escape(c.Prompt), tview.Escape(label), 0, nil)
 				if selected.ID == c.ID {

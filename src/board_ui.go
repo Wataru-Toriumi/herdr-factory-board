@@ -16,10 +16,10 @@ const (
 	workLane
 	reviewLane
 	doneLane
-	failedLane
+	failedOrCanceledLane
 )
 
-var laneNames = [...]string{"未着手", "設計中", "設計完了", "進行中", "レビュー中", "完了", "失敗"}
+var laneNames = [...]string{"未着手", "設計中", "設計完了", "進行中", "レビュー中", "完了", "失敗・中止"}
 var laneColors = [...]tcell.Color{tcell.ColorLightSkyBlue, tcell.ColorPlum, tcell.ColorLavender, tcell.ColorGold, tcell.ColorLightCyan, tcell.ColorLightGreen, tcell.ColorLightCoral}
 
 func cardLane(c card) int {
@@ -37,8 +37,8 @@ func cardLane(c card) int {
 		return reviewLane
 	case done:
 		return doneLane
-	case failed:
-		return failedLane
+	case failed, canceled:
+		return failedOrCanceledLane
 	default:
 		return -1
 	}

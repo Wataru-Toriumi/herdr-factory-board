@@ -24,6 +24,21 @@ func TestCardSelectionFollowsWorkerAcrossColumns(t *testing.T) {
 	}
 }
 
+func TestFailedAndCanceledCardsShareLane(t *testing.T) {
+	u := newBoardUI(store{t.TempDir()}, "")
+	u.renderTasks([]card{{ID: 1, Status: failed, Source: "定期 #3"}, {ID: 2, Status: canceled}})
+	list := u.lists[failedOrCanceledLane]
+	if list.GetItemCount() != 2 {
+		t.Fatalf("失敗・中止のカード数 = %d", list.GetItemCount())
+	}
+	for i, want := range []string{"失敗", "キャンセル済み"} {
+		_, label := list.GetItemText(i)
+		if !strings.HasPrefix(label, want) {
+			t.Fatalf("カードの状態表示 = %q, 期待値 = %q", label, want)
+		}
+	}
+}
+
 func TestRefreshPreservesActiveView(t *testing.T) {
 	for _, tc := range []struct {
 		name string

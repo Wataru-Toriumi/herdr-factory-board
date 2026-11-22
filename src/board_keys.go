@@ -32,6 +32,13 @@ func (u *boardUI) updateDetailTiming() {
 	if u.detail.GetText(false) != text {
 		u.detail.SetText(text)
 	}
+	u.setCardHint(hint)
+}
+
+func (u *boardUI) setCardHint(hint string) {
+	if u.detailCard != nil && u.detailCard.canCancel() {
+		hint = "x キャンセル   " + hint
+	}
 	u.hint.SetText(hint)
 }
 
@@ -50,6 +57,7 @@ func (u *boardUI) closeTimingEditor() {
 func (u *boardUI) help() {
 	var text strings.Builder
 	fmt.Fprintln(&text, "タスクを選んで v で詳細を表示。Enter で開始・担当ペインへ移動・結果表示。")
+	fmt.Fprintln(&text, "カードの詳細で x を押すと、そのタスクをキャンセルします。定期実行の次回以降の予定は継続します。")
 	fmt.Fprintln(&text, "手動タスクの詳細で d から設計。設計案を確認し、a で承認・実装、r でコメントして再設計。実装後はレビュー中のカードで結果を確認し、a で完了。")
 	fmt.Fprintln(&text, "p で作業先を選択、n でタスクを追加。初回はフォルダ選択から始めます。")
 	fmt.Fprintln(&text, "コマンドはそのまま入力し、Enter で確定。Esc でキャンセル。")
@@ -193,6 +201,14 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	case "detail":
+		if key == tcell.KeyRune && event.Rune() == 'x' && u.detailCard != nil && u.detailCard.canCancel() {
+			err := cancelCard(u.store, *u.detailCard)
+			u.refresh()
+			if err != nil {
+				u.notice.SetText(err.Error())
+			}
+			return nil
+		}
 		if key == tcell.KeyRune && u.detailCard != nil && u.designKey(event.Rune()) {
 			return nil
 		}

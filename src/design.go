@@ -21,6 +21,8 @@ func (c card) canReviewDesign() bool {
 
 func (c card) phaseLabel() string {
 	switch c.Status {
+	case canceled:
+		return "キャンセル済み"
 	case failed:
 		switch c.Phase {
 		case designPhase:
