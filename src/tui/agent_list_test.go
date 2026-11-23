@@ -10,6 +10,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -23,7 +24,7 @@ func TestAgentEnterUsesCurrentCardPane(t *testing.T) {
 	}
 	card := board.Card{ID: 1, Status: board.Running, Pane: "p1"}
 	u := newBoardUI(s, bin)
-	u.agents.render(boardAgents([]herdr.Pane{{ID: "p1"}}, nil, []board.Card{card}))
+	u.agents.render(agentlist.Build([]herdr.Pane{{ID: "p1"}}, nil, []board.Card{card}))
 	u.key(tcell.NewEventKey(tcell.KeyTab, 0, 0))
 
 	// 一覧の次回更新より先に、保存済みのカードが変わる場合を再現する。

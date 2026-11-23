@@ -1,37 +1,25 @@
 package tui
 
-import "fmt"
+import (
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
+)
 
 type agentList struct {
-	*rowList[agentRow]
+	*rowList[agentlist.Row]
+	blocked int
 }
 
-func (l *agentList) blockedCount() int {
-	blocked := 0
-	for _, r := range l.rows {
-		if r.status == "blocked" {
-			blocked++
-		}
+func (l *agentList) render(model agentlist.ViewModel) {
+	l.blocked = model.Blocked
+	l.setRows(model.Rows, func(a, b agentlist.Row) bool { return a.Pane == b.Pane }, agentlist.Row.Labels)
+	l.SetTitle(model.Title())
+}
+
+func (u *boardUI) focusAgent(row agentlist.Row) error {
+	if row.CardID != 0 {
+		return worker.Focus(u.store, u.herdr, row.CardID)
 	}
-	return blocked
-}
-
-var agentStates = map[string]string{
-	"blocked": "入力待ち", "working": "作業中", "idle": "待機中", "done": "完了",
-}
-
-func agentRowLabels(r agentRow) (string, string) {
-	state := agentStates[r.status]
-	if state == "" {
-		state = "状態不明"
-	}
-	return fmt.Sprintf("%s  ·  %s   %s", state, r.name, r.task), r.workspace + "   " + r.pane
-}
-
-func (l *agentList) render(rows []agentRow) {
-	l.setRows(rows, func(a, b agentRow) bool { return a.pane == b.pane }, agentRowLabels)
-	l.SetTitle(fmt.Sprintf(" エージェント %d ", len(rows)))
-	if len(rows) == 0 {
-		l.SetTitle(" エージェントなし ")
-	}
+	return herdr.FocusAgent(u.herdr, row.Pane)
 }

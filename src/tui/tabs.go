@@ -56,5 +56,5 @@ func (u *boardUI) updateHeader() {
 		labels[i] = tab.label
 	}
 	labels[u.tab] = "[black:aqua:b] " + labels[u.tab] + " [-:-:-]"
-	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", strings.Join(labels, "  "), u.agents.blockedCount()))
+	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", strings.Join(labels, "  "), u.agents.blocked))
 }
