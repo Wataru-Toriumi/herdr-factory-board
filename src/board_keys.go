@@ -126,15 +126,8 @@ func (u *boardUI) submitInput() {
 	u.refresh()
 }
 
-func (u *boardUI) composeAtWorkDir(prefix string) {
-	switch {
-	case u.workDir != "":
-		u.editForProject(prefix, u.workDir)
-	case len(u.projects) == 1:
-		u.editForProject(prefix, u.projects[0])
-	default:
-		u.pickProject(u.workDir, false, func(dir string) { u.editForProject(prefix, dir) })
-	}
+func (u *boardUI) composeSchedule(prefix string) {
+	u.selectScheduleProject(func(dir string) { u.editForProject(prefix, dir) })
 }
 
 func (u *boardUI) execute(line string) {
@@ -143,29 +136,33 @@ func (u *boardUI) execute(line string) {
 
 func (u *boardUI) executeAt(line, dir string) {
 	u.notice.SetText("")
-	name, arg, _ := strings.Cut(strings.TrimSpace(line), " ")
-	if dir == "" && name == "add" && strings.TrimSpace(arg) != "" {
-		u.pickProject(u.workDir, false, func(dir string) { u.executeAt(line, dir) })
-		return
-	}
+	cmd := parseCommand(line)
 	if dir == "" {
-		dir = u.workDir
-	}
-	if dir == "" && (name == "daily" || name == "every") {
-		if len(u.projects) != 1 {
-			u.pickProject(u.workDir, false, func(dir string) { u.executeAt(line, dir) })
+		run := func(selected string) { u.runCommand(cmd, selected) }
+		switch cmd.name {
+		case "add":
+			if cmd.arg != "" {
+				u.pickProject(u.workDir, false, run)
+				return
+			}
+		case "daily", "every":
+			u.selectScheduleProject(run)
 			return
 		}
-		dir = u.projects[0]
+		dir = u.workDir
 	}
-	c, err := command(u.store, u.herdr, dir, line)
-	if err == nil && name == "dir" {
-		u.workDir = filepath.Clean(strings.TrimSpace(arg))
+	u.runCommand(cmd, dir)
+}
+
+func (u *boardUI) runCommand(cmd boardCommand, dir string) {
+	c, err := cmd.run(u.store, u.herdr, dir)
+	if err == nil && cmd.name == "dir" {
+		u.workDir = filepath.Clean(cmd.arg)
 	}
 	u.refresh()
 	if err != nil {
 		u.notice.SetText(err.Error())
-	} else if name == "add" && u.workDir != "" && dir != u.workDir {
+	} else if cmd.name == "add" && u.workDir != "" && dir != u.workDir {
 		u.notice.SetText("チケットを追加しました。作業先: " + dir)
 	} else if c != nil {
 		u.read("カードの詳細", "", c.sourceScheduleID())
@@ -304,13 +301,13 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'n':
 			if u.tab == automationTab {
-				u.composeAtWorkDir("daily ")
+				u.composeSchedule("daily ")
 			} else {
 				u.pickProject(u.workDir, false, func(dir string) { u.editForProject("add ", dir) })
 			}
 		case 'i':
 			if u.tab == automationTab {
-				u.composeAtWorkDir("every ")
+				u.composeSchedule("every ")
 			} else {
 				u.edit("i")
 			}

@@ -6,13 +6,13 @@ import (
 
 func TestAddAndResultCommands(t *testing.T) {
 	s := store{t.TempDir()}
-	if _, err := command(s, "false", s.dir, "dir "+s.dir); err != nil {
+	if _, err := parseCommand("dir "+s.dir).run(s, "false", s.dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := command(s, "false", s.dir, "add 手動タスク"); err != nil {
+	if _, err := parseCommand("add 手動タスク").run(s, "false", s.dir); err != nil {
 		t.Fatal(err)
 	}
-	c, err := command(s, "false", s.dir, "result 1")
+	c, err := parseCommand("result 1").run(s, "false", s.dir)
 	if err != nil || c == nil || c.ID != 1 || c.Status != todo || c.Dir != s.dir || c.Prompt != "手動タスク" || c.Result != "" {
 		t.Fatalf("結果のカード = %+v, %v", c, err)
 	}
@@ -20,10 +20,10 @@ func TestAddAndResultCommands(t *testing.T) {
 
 func TestDailyCommandSavesBeforeSchedulerLaunch(t *testing.T) {
 	s := store{t.TempDir()}
-	if _, err := command(s, "false", s.dir, "dir "+s.dir); err != nil {
+	if _, err := parseCommand("dir "+s.dir).run(s, "false", s.dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := command(s, "false", s.dir, "daily 09:00 朝のタスク"); err == nil {
+	if _, err := parseCommand("daily 09:00 朝のタスク").run(s, "false", s.dir); err == nil {
 		t.Fatal("スケジューラーの起動エラーが返りませんでした")
 	}
 	b, err := s.read()

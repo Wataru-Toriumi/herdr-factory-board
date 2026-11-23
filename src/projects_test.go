@@ -153,3 +153,43 @@ func TestRegisteredAndHistoricalProjects(t *testing.T) {
 		t.Fatalf("同名のプロジェクトを区別できません: %v", names)
 	}
 }
+
+func TestTypedScheduleProjectSelection(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		projects        []string
+		filter, wantDir string
+	}{
+		{"全体表示に1件", []string{"/api"}, "", "/api"},
+		{"個別表示に複数件", []string{"/api", "/web"}, "/web", "/web"},
+		{"全体表示に複数件", []string{"/api", "/web"}, "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := store{t.TempDir()}
+			if err := s.edit(func(b *board) error { b.Projects = tc.projects; return nil }); err != nil {
+				t.Fatal(err)
+			}
+			u := newBoardUI(s, "true")
+			u.workDir = tc.filter
+			u.refresh()
+			u.execute("  every   15m 差分を確認  ")
+			if tc.wantDir == "" {
+				if u.activePage() != "directory" {
+					t.Fatal("登録先の選択が省略されました")
+				}
+				u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+			}
+			b, err := s.read()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.wantDir == "" {
+				if len(b.Schedules) != 0 {
+					t.Fatal("選択を取り消した予定が登録されました")
+				}
+			} else if len(b.Schedules) != 1 || b.Schedules[0].Dir != tc.wantDir || b.Schedules[0].Prompt != "差分を確認" {
+				t.Fatalf("登録後の予定: %+v", b.Schedules)
+			}
+		})
+	}
+}

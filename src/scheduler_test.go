@@ -61,7 +61,7 @@ func TestIntervalScheduleAcrossTicks(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := time.Now()
-	if _, err := command(s, "true", s.dir, "every 15m 差分を確認する"); err != nil {
+	if _, err := parseCommand("every 15m 差分を確認する").run(s, "true", s.dir); err != nil {
 		t.Fatal(err)
 	}
 	b, err := s.read()
@@ -106,7 +106,7 @@ func TestIntervalCommandRejectsInvalidInput(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, args := range []string{"0m 確認", "-1m 確認", "30s 確認", "1m30s 確認", "15 確認", "15m"} {
-		if _, err := command(s, "true", s.dir, "every "+args); err == nil {
+		if _, err := parseCommand("every "+args).run(s, "true", s.dir); err == nil {
 			t.Errorf("無効な入力が受理されました: %q", args)
 		}
 	}
