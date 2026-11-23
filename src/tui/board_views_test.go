@@ -28,6 +28,27 @@ func TestCardSelectionFollowsWorkerAcrossColumns(t *testing.T) {
 	}
 }
 
+func TestCompactBoardFollowsLaneSelection(t *testing.T) {
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	u.compact = true
+	u.layoutColumns()
+	cards := []board.Card{{ID: 1, Status: board.Todo}}
+	u.renderTasks(cards)
+	check := func(lane int) {
+		t.Helper()
+		if u.columns.GetItemCount() != 1 || u.columns.GetItem(0) != u.lists[lane] || u.app.GetFocus() != u.lists[lane] {
+			t.Fatalf("表示列とフォーカスが %s に揃っていません", laneNames[lane])
+		}
+	}
+	u.key(tcell.NewEventKey(tcell.KeyLeft, 0, 0))
+	check(failedOrCanceledLane)
+	u.key(tcell.NewEventKey(tcell.KeyRight, 0, 0))
+	check(todoLane)
+	cards[0].Status = board.Running
+	u.renderTasks(cards)
+	check(workLane)
+}
+
 func TestFailedAndCanceledCardsShareLane(t *testing.T) {
 	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
 	u.renderTasks([]board.Card{{ID: 1, Status: board.Failed, Source: "定期 #3"}, {ID: 2, Status: board.Canceled}})
