@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
@@ -45,51 +43,6 @@ func Running(s store.Store) (bool, error) {
 func tryAcquireSchedulerLock(s store.Store) (*os.File, error) {
 	lock, _, err := schedulerLease(s, false)
 	return lock, err
-}
-
-func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
-	when, prompt, _ := strings.Cut(arg, " ")
-	rule := schedule.Rule{Agent: agent, Prompt: strings.TrimSpace(prompt)}
-	if rule.Prompt == "" {
-		return errors.New("作業内容を入力してください")
-	}
-	if err := s.Edit(func(b *board.State) error {
-		if dir == "" {
-			return errors.New("先に dir で作業先を指定してください")
-		}
-		if err := rule.SetTiming(kind, when, time.Now()); err != nil {
-			return err
-		}
-		b.NextID++
-		rule.ID, rule.Dir = b.NextID, dir
-		b.Schedules = append(b.Schedules, rule)
-		return nil
-	}); err != nil {
-		return err
-	}
-	return EnsureRunning(s, herdrBin)
-}
-
-func UpdateTiming(s store.Store, id int, value string) error {
-	return s.Edit(func(b *board.State) error {
-		i := schedule.IndexByID(b.Schedules, id)
-		if i < 0 {
-			return fmt.Errorf("定期実行 #%d がありません", id)
-		}
-		r := &b.Schedules[i]
-		return r.SetTiming(r.TimingKind(), strings.TrimSpace(value), time.Now())
-	})
-}
-
-func Remove(s store.Store, id int) error {
-	return s.Edit(func(b *board.State) error {
-		i := schedule.IndexByID(b.Schedules, id)
-		if i < 0 {
-			return fmt.Errorf("定期実行 #%d がありません", id)
-		}
-		b.Schedules = append(b.Schedules[:i], b.Schedules[i+1:]...)
-		return nil
-	})
 }
 
 func EnsureRunning(s store.Store, herdrBin string) error {
@@ -144,18 +97,4 @@ func Run(s store.Store, herdrBin string) error {
 		}
 		<-ticker.C
 	}
-}
-
-func ChangeAgent(s store.Store, id int, seen, agent string) error {
-	return s.Edit(func(b *board.State) error {
-		i := schedule.IndexByID(b.Schedules, id)
-		if i < 0 {
-			return fmt.Errorf("定期実行 #%d がありません", id)
-		}
-		if b.Schedules[i].Agent != seen {
-			return errors.New("予定の担当が更新されました。最新の状態を確認してください")
-		}
-		b.Schedules[i].Agent = agent
-		return nil
-	})
 }
