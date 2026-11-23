@@ -1,21 +1,26 @@
-package main
+package tui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/herdr"
+)
 
 func TestBoardAgents(t *testing.T) {
-	panes := []livePane{
+	panes := []herdr.Pane{
 		{ID: "w1:p1", Workspace: "w1", Label: "Shell"},
 		{ID: "w1:p2", Workspace: "w1", Label: "Factory Board Worker"},
 		{ID: "w2:p1", Workspace: "w2", Agent: "claude", Status: "blocked", Title: "レビュー"},
 		{ID: "w1:p3", Workspace: "w1", Agent: "codex", Status: "blocked"},
 	}
-	cards := []card{
-		{ID: 1, Status: done, Pane: "w1:p1"},
-		{ID: 2, Status: running, Pane: "w1:p2", Prompt: "実装"},
-		{ID: 3, Status: running, Pane: "w1:p3", Prompt: "確認"},
-		{ID: 4, Status: running, Pane: "w1:p4", Prompt: "閉じたペイン"},
+	cards := []board.Card{
+		{ID: 1, Status: board.Done, Pane: "w1:p1"},
+		{ID: 2, Status: board.Running, Pane: "w1:p2", Prompt: "実装"},
+		{ID: 3, Status: board.Running, Pane: "w1:p3", Prompt: "確認"},
+		{ID: 4, Status: board.Running, Pane: "w1:p4", Prompt: "閉じたペイン"},
 	}
-	rows := boardAgents(panes, []workspace{{ID: "w1", Label: "作業場"}}, cards)
+	rows := boardAgents(panes, []herdr.Workspace{{ID: "w1", Label: "作業場"}}, cards)
 	if len(rows) != 3 {
 		t.Fatalf("一覧: %+v", rows)
 	}

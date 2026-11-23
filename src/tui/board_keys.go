@@ -1,10 +1,15 @@
-package main
+package tui
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/command"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -26,7 +31,7 @@ func (u *boardUI) updateDetailTiming() {
 	timing := "解除済み"
 	hint := "↑↓ スクロール   Esc 戻る"
 	if r, ok := u.schedules.byID(u.detailScheduleID); ok {
-		timing = r.frequency()
+		timing = r.Frequency()
 		hint = "t 定期実行の設定変更   ↑↓ スクロール   Esc 戻る"
 	}
 	text := fmt.Sprintf("定期実行 #%d  %s\n\n%s", u.detailScheduleID, timing, u.detailBody)
@@ -37,7 +42,7 @@ func (u *boardUI) updateDetailTiming() {
 }
 
 func (u *boardUI) setCardHint(hint string) {
-	if u.detailCard != nil && u.detailCard.canCancel() {
+	if u.detailCard != nil && u.detailCard.CanCancel() {
 		hint = "x キャンセル   " + hint
 	}
 	u.hint.SetText(hint)
@@ -90,7 +95,7 @@ func (u *boardUI) edit(initial string) {
 	u.app.SetFocus(u.input)
 }
 
-func (u *boardUI) editScheduleTiming(r schedule) {
+func (u *boardUI) editScheduleTiming(r schedule.Rule) {
 	value, label := r.Time, "時刻（HH:MM）"
 	if r.Interval != nil {
 		value, label = fmt.Sprintf("%dm", r.Interval.Minutes), "間隔（例 15m）"
@@ -109,7 +114,7 @@ func (u *boardUI) submitInput() {
 			return
 		}
 		u.closeFeedbackEditor()
-		u.launchDetailPhase(designPhase, value)
+		u.launchDetailPhase(board.DesignPhase, value)
 		return
 	}
 	if u.editingScheduleID == 0 {
@@ -118,7 +123,7 @@ func (u *boardUI) submitInput() {
 		u.executeAt(value, dir)
 		return
 	}
-	if err := updateScheduleTiming(u.store, u.editingScheduleID, value); err != nil {
+	if err := scheduler.UpdateTiming(u.store, u.editingScheduleID, value); err != nil {
 		u.notice.SetText(err.Error())
 		return
 	}
@@ -136,12 +141,12 @@ func (u *boardUI) execute(line string) {
 
 func (u *boardUI) executeAt(line, dir string) {
 	u.notice.SetText("")
-	cmd := parseCommand(line)
+	cmd := command.Parse(line)
 	if dir == "" {
 		run := func(selected string) { u.runCommand(cmd, selected) }
-		switch cmd.name {
+		switch cmd.Name {
 		case "add":
-			if cmd.arg != "" {
+			if cmd.Arg != "" {
 				u.pickProject(u.workDir, false, run)
 				return
 			}
@@ -154,18 +159,18 @@ func (u *boardUI) executeAt(line, dir string) {
 	u.runCommand(cmd, dir)
 }
 
-func (u *boardUI) runCommand(cmd boardCommand, dir string) {
-	c, err := cmd.run(u.store, u.herdr, dir)
-	if err == nil && cmd.name == "dir" {
-		u.workDir = filepath.Clean(cmd.arg)
+func (u *boardUI) runCommand(cmd command.Command, dir string) {
+	c, err := cmd.Run(u.store, u.herdr, dir)
+	if err == nil && cmd.Name == "dir" {
+		u.workDir = filepath.Clean(cmd.Arg)
 	}
 	u.refresh()
 	if err != nil {
 		u.notice.SetText(err.Error())
-	} else if cmd.name == "add" && u.workDir != "" && dir != u.workDir {
+	} else if cmd.Name == "add" && u.workDir != "" && dir != u.workDir {
 		u.notice.SetText("チケットを追加しました。作業先: " + dir)
 	} else if c != nil {
-		u.read("カードの詳細", "", c.sourceScheduleID())
+		u.read("カードの詳細", "", c.SourceScheduleID())
 		u.renderCardDetail(*c)
 	}
 }
@@ -192,9 +197,9 @@ func (u *boardUI) activate() {
 	}
 	action := "result"
 	switch c.Status {
-	case todo:
+	case board.Todo:
 		action = "start"
-	case running:
+	case board.Running:
 		action = "open"
 	}
 	u.execute(fmt.Sprintf("%s %d", action, c.ID))
@@ -228,12 +233,12 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	case "detail":
-		if key == tcell.KeyRune && event.Rune() == 'p' && u.detailCard != nil && u.detailCard.canChangeProject() {
+		if key == tcell.KeyRune && event.Rune() == 'p' && u.detailCard != nil && u.detailCard.CanChangeProject() {
 			u.pickCardProject(*u.detailCard)
 			return nil
 		}
-		if key == tcell.KeyRune && event.Rune() == 'x' && u.detailCard != nil && u.detailCard.canCancel() {
-			err := cancelCard(u.store, *u.detailCard)
+		if key == tcell.KeyRune && event.Rune() == 'x' && u.detailCard != nil && u.detailCard.CanCancel() {
+			err := worker.Cancel(u.store, *u.detailCard)
 			u.refresh()
 			if err != nil {
 				u.notice.SetText(err.Error())

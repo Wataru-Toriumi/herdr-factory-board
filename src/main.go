@@ -4,10 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
 )
 
 func run() error {
-	s, err := workspaceStore()
+	s, err := store.ForWorkspace()
 	if err != nil {
 		return err
 	}
@@ -16,13 +21,13 @@ func run() error {
 		herdr = "herdr"
 	}
 	if len(os.Args) == 1 {
-		return runBoard(s, herdr)
+		return tui.Run(s, herdr)
 	}
 	switch os.Args[1] {
 	case "worker":
-		return runWorker(s)
+		return worker.Run(s)
 	case "scheduler":
-		return runScheduler(s, herdr)
+		return scheduler.Run(s, herdr)
 	default:
 		return errors.New("不明な起動モードです")
 	}

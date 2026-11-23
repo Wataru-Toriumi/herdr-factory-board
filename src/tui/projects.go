@@ -1,59 +1,12 @@
-package main
+package tui
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
-	"slices"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
 	"github.com/rivo/tview"
 )
-
-func registerProject(s store, path string) error {
-	if !filepath.IsAbs(path) {
-		return errors.New("作業先の絶対パスを指定してください")
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return errors.New("作業先はディレクトリを指定してください")
-	}
-	path = filepath.Clean(path)
-	return s.edit(func(b *board) error {
-		if !slices.Contains(b.Projects, path) {
-			b.Projects = append(b.Projects, path)
-		}
-		return nil
-	})
-}
-
-// 旧版の作業先と履歴もプロジェクトとして扱う。カードや予定の書き換えは不要。
-func (b board) projectDirs() []string {
-	seen := make(map[string]bool)
-	add := func(dir string) {
-		if dir != "" {
-			seen[dir] = true
-		}
-	}
-	add(b.Dir)
-	for _, dir := range b.Projects {
-		add(dir)
-	}
-	for _, c := range b.Cards {
-		add(c.Dir)
-	}
-	for _, r := range b.Schedules {
-		add(r.Dir)
-	}
-	dirs := make([]string, 0, len(seen))
-	for dir := range seen {
-		dirs = append(dirs, dir)
-	}
-	slices.Sort(dirs)
-	return dirs
-}
 
 func projectNames(dirs []string) map[string]string {
 	counts := make(map[string]int)
@@ -101,14 +54,10 @@ func (u *boardUI) pickProject(current string, filter bool, selected func(string)
 	u.app.SetFocus(list)
 }
 
-func (c card) canChangeProject() bool {
-	return c.Status == todo && c.ScheduleID == 0 && c.Source == ""
-}
-
-func (u *boardUI) pickCardProject(seen card) {
+func (u *boardUI) pickCardProject(seen board.Card) {
 	u.pickProject(seen.Dir, false, func(dir string) {
-		err := u.store.editCard(seen.ID, func(c *card) error {
-			if !c.canChangeProject() || c.Dir != seen.Dir {
+		err := u.store.EditCard(seen.ID, func(c *board.Card) error {
+			if !c.CanChangeProject() || c.Dir != seen.Dir {
 				return errors.New("チケットが更新されました。最新の作業先と状態を確認してください")
 			}
 			c.Dir = dir

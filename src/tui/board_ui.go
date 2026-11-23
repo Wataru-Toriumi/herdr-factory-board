@@ -1,10 +1,15 @@
-package main
+// Package tui は Factory Board の端末画面とキー操作を担当する。
+package tui
 
 import (
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -22,22 +27,22 @@ const (
 var laneNames = [...]string{"未着手", "設計中", "設計完了", "進行中", "レビュー中", "完了", "失敗・中止"}
 var laneColors = [...]tcell.Color{tcell.ColorLightSkyBlue, tcell.ColorPlum, tcell.ColorLavender, tcell.ColorGold, tcell.ColorLightCyan, tcell.ColorLightGreen, tcell.ColorLightCoral}
 
-func cardLane(c card) int {
+func cardLane(c board.Card) int {
 	switch c.Status {
-	case todo:
+	case board.Todo:
 		return todoLane
-	case awaitingReview:
+	case board.AwaitingDesignReview:
 		return designCompleteLane
-	case starting, running:
-		if c.Phase == designPhase {
+	case board.Starting, board.Running:
+		if c.Phase == board.DesignPhase {
 			return designLane
 		}
 		return workLane
-	case awaitingResultReview:
+	case board.AwaitingResultReview:
 		return reviewLane
-	case done:
+	case board.Done:
 		return doneLane
-	case failed, canceled:
+	case board.Failed, board.Canceled:
 		return failedOrCanceledLane
 	default:
 		return -1
@@ -54,12 +59,12 @@ var tabLabels = [...]string{"タスク", "エージェント", "自動化"}
 
 type boardUI struct {
 	app                                   *tview.Application
-	store                                 store
+	store                                 store.Store
 	herdr                                 string
 	pages                                 *tview.Pages
 	columns                               *tview.Flex
 	lists                                 []*tview.List
-	cards                                 [][]card
+	cards                                 [][]board.Card
 	agents                                *tview.List
 	schedules                             *scheduleList
 	rows                                  []agentRow
@@ -72,9 +77,9 @@ type boardUI struct {
 	editingScheduleID                     int
 	detailScheduleID                      int
 	detailBody                            string
-	detailCard                            *card
+	detailCard                            *board.Card
 	editingFeedback                       bool
-	spaces                                []workspace
+	spaces                                []herdr.Workspace
 	tab                                   int
 	lane                                  int
 	compact                               bool
@@ -88,7 +93,7 @@ func boardList() *tview.List {
 	return l
 }
 
-func newBoardUI(s store, herdr string) *boardUI {
+func newBoardUI(s store.Store, herdr string) *boardUI {
 	u := &boardUI{
 		app:       tview.NewApplication(),
 		store:     s,
@@ -104,7 +109,7 @@ func newBoardUI(s store, herdr string) *boardUI {
 		footer:    tview.NewPages(),
 		agents:    boardList(),
 		schedules: &scheduleList{List: boardList()},
-		cards:     make([][]card, len(laneNames)),
+		cards:     make([][]board.Card, len(laneNames)),
 	}
 	for _, color := range laneColors {
 		l := boardList()
@@ -132,7 +137,7 @@ func newBoardUI(s store, herdr string) *boardUI {
 	return u
 }
 
-func runBoard(s store, herdr string) error {
+func Run(s store.Store, herdr string) error {
 	u := newBoardUI(s, herdr)
 	u.refresh()
 	stop := make(chan struct{})
@@ -209,17 +214,17 @@ func (u *boardUI) updateHeader() {
 }
 
 func (u *boardUI) refresh() {
-	b, err := u.store.read()
+	b, err := u.store.Read()
 	if err != nil {
 		u.notice.SetText(err.Error())
 		return
 	}
-	active, err := schedulerRunning(u.store)
-	u.projects = b.projectDirs()
+	active, err := scheduler.Running(u.store)
+	u.projects = b.ProjectDirs()
 	u.schedules.render(b.Schedules, u.workDir, active, err)
 	if u.activePage() == "detail" {
 		if u.detailCard != nil {
-			if c, err := b.find(u.detailCard.ID); err == nil && *c != *u.detailCard {
+			if c, err := b.FindCard(u.detailCard.ID); err == nil && *c != *u.detailCard {
 				u.renderCardDetail(*c)
 			}
 		}
@@ -231,12 +236,12 @@ func (u *boardUI) refresh() {
 	}
 	u.showWorkDir()
 
-	panes, err := listPanes(u.herdr)
+	panes, err := herdr.ListPanes(u.herdr)
 	if err != nil {
 		u.notice.SetText("ペイン一覧: " + err.Error())
 		return
 	}
-	spaces, err := listWorkspaces(u.herdr)
+	spaces, err := herdr.ListWorkspaces(u.herdr)
 	if err != nil {
 		u.notice.SetText("ワークスペース一覧: " + err.Error())
 	} else {
@@ -245,11 +250,11 @@ func (u *boardUI) refresh() {
 	u.renderAgents(boardAgents(panes, u.spaces, b.Cards))
 }
 
-func (u *boardUI) selectedCard() (card, bool) {
+func (u *boardUI) selectedCard() (board.Card, bool) {
 	i := u.lists[u.lane].GetCurrentItem()
 	group := u.cards[u.lane]
 	if i < 0 || i >= len(group) {
-		return card{}, false
+		return board.Card{}, false
 	}
 	return group[i], true
 }

@@ -1,15 +1,17 @@
-package main
+package tui
 
 import (
 	"fmt"
 	"maps"
 	"reflect"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func cardListLabel(c card, lane int, project string) string {
+func cardListLabel(c board.Card, lane int, project string) string {
 	label := fmt.Sprintf("#%d", c.ID)
 	if project != "" {
 		label += "  " + project
@@ -17,10 +19,10 @@ func cardListLabel(c card, lane int, project string) string {
 	if c.Source != "" {
 		label += "  " + c.Source
 	}
-	if c.Status == starting {
+	if c.Status == board.Starting {
 		label += "  起動中"
 	}
-	phase := c.phaseLabel()
+	phase := c.PhaseLabel()
 	if phase == "" {
 		return label
 	}
@@ -31,14 +33,14 @@ func cardListLabel(c card, lane int, project string) string {
 }
 
 // 自動更新時は、選択中のカード番号を使って移動先の列と行を復元する。
-func (u *boardUI) renderTasks(cards []card) {
+func (u *boardUI) renderTasks(cards []board.Card) {
 	var names map[string]string
 	if u.workDir == "" {
 		names = projectNames(u.projects)
 	}
 	labelsChanged := !maps.Equal(names, u.taskProjectNames)
 	u.taskProjectNames = names
-	groups := make([][]card, len(laneNames))
+	groups := make([][]board.Card, len(laneNames))
 	for _, c := range cards {
 		if u.workDir != "" && c.Dir != u.workDir {
 			continue
@@ -122,28 +124,28 @@ func (u *boardUI) renderAgents(rows []agentRow) {
 
 type scheduleList struct {
 	*tview.List
-	all   []schedule
-	rules []schedule
+	all   []schedule.Rule
+	rules []schedule.Rule
 }
 
-func (l *scheduleList) byID(id int) (schedule, bool) {
+func (l *scheduleList) byID(id int) (schedule.Rule, bool) {
 	for _, r := range l.all {
 		if r.ID == id {
 			return r, true
 		}
 	}
-	return schedule{}, false
+	return schedule.Rule{}, false
 }
 
-func (l *scheduleList) selected() (schedule, bool) {
+func (l *scheduleList) selected() (schedule.Rule, bool) {
 	i := l.GetCurrentItem()
 	if i < 0 || i >= len(l.rules) {
-		return schedule{}, false
+		return schedule.Rule{}, false
 	}
 	return l.rules[i], true
 }
 
-func (l *scheduleList) render(all []schedule, dir string, active bool, err error) {
+func (l *scheduleList) render(all []schedule.Rule, dir string, active bool, err error) {
 	l.all = all
 	rules := all
 	if dir != "" {
@@ -169,7 +171,7 @@ func (l *scheduleList) render(all []schedule, dir string, active bool, err error
 	index := l.GetCurrentItem()
 	l.Clear()
 	for i, r := range rules {
-		l.AddItem(tview.Escape(fmt.Sprintf("%s  %s", r.frequency(), r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
+		l.AddItem(tview.Escape(fmt.Sprintf("%s  %s", r.Frequency(), r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
 		if r.ID == selected.ID {
 			index = i
 		}

@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"os"
@@ -7,13 +7,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
 	"github.com/gdamore/tcell/v2"
 )
 
 func TestDesignReviewFromTaskDetail(t *testing.T) {
-	s := store{t.TempDir()}
-	if err := s.edit(func(b *board) error {
-		b.newCard("検索を追加", s.dir, "")
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.NewCard("検索を追加", s.Dir, "")
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -47,7 +50,7 @@ printf '%s' "$ANSWER" > "$result"
 		t.Setenv("EXPECT_PHASE", phase)
 		t.Setenv("ANSWER", answer)
 		t.Setenv("FACTORY_ATTEMPT", strconv.Itoa(attempt))
-		if err := runWorker(s); err != nil {
+		if err := worker.Run(s); err != nil {
 			t.Fatal(err)
 		}
 		text, err := os.ReadFile(capture)
@@ -62,7 +65,7 @@ printf '%s' "$ANSWER" > "$result"
 	press := func(k tcell.Key) { u.key(tcell.NewEventKey(k, 0, 0)) }
 	key('v')
 	key('d')
-	if c := u.detailCard; u.lane != designLane || c.Status != starting || c.Phase != designPhase {
+	if c := u.detailCard; u.lane != designLane || c.Status != board.Starting || c.Phase != board.DesignPhase {
 		t.Fatalf("設計開始: %+v", c)
 	}
 	if prompt := run(1, "design", "設計案A"); !strings.Contains(prompt, "検索を追加") {
@@ -70,10 +73,10 @@ printf '%s' "$ANSWER" > "$result"
 	}
 	u.refresh()
 	first := *u.detailCard
-	if u.lane != designCompleteLane || !first.canReviewDesign() || first.Design != "設計案A" || first.Attempt != 1 || !strings.Contains(u.hint.GetText(false), "承認") {
+	if u.lane != designCompleteLane || !first.CanReviewDesign() || first.Design != "設計案A" || first.Attempt != 1 || !strings.Contains(u.hint.GetText(false), "承認") {
 		t.Fatalf("設計レビュー: %+v", first)
 	}
-	if err := startCard(s, "true", 1); err == nil {
+	if err := worker.Start(s, "true", 1); err == nil {
 		t.Fatal("レビュー中に通常実行できました")
 	}
 	key('r')
@@ -82,13 +85,13 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal("空のコメントが受理されました")
 	}
 	press(tcell.KeyEscape)
-	if u.activePage() != "detail" || u.detailCard.Status != awaitingReview {
+	if u.activePage() != "detail" || u.detailCard.Status != board.AwaitingDesignReview {
 		t.Fatal("キャンセル後のレビュー状態が不正です")
 	}
 	key('r')
 	u.input.SetText("索引を使う")
 	press(tcell.KeyEnter)
-	if u.lane != designLane || u.detailCard.Status != starting {
+	if u.lane != designLane || u.detailCard.Status != board.Starting {
 		t.Fatalf("再設計開始: %+v", u.detailCard)
 	}
 	prompt := run(2, "design", "設計案B")
@@ -97,7 +100,7 @@ printf '%s' "$ANSWER" > "$result"
 			t.Fatalf("再設計の入力: %s", prompt)
 		}
 	}
-	if err := launchFromDetail(s, "true", first, implementationPhase, ""); err == nil {
+	if err := worker.StartPhase(s, "true", first, board.ImplementationPhase, ""); err == nil {
 		t.Fatal("古い設計案を承認できました")
 	}
 
@@ -108,11 +111,11 @@ printf '%s' "$ANSWER" > "$result"
 		press(tcell.KeyRight)
 	}
 	press(tcell.KeyEnter)
-	if c := u.detailCard; c == nil || c.Design != "設計案B" || c.Status != awaitingReview || !strings.Contains(u.detail.GetText(false), "設計完了") {
+	if c := u.detailCard; c == nil || c.Design != "設計案B" || c.Status != board.AwaitingDesignReview || !strings.Contains(u.detail.GetText(false), "設計完了") {
 		t.Fatalf("再設計結果: %+v", c)
 	}
 	key('a')
-	if u.detailCard.Status != starting || cardLane(*u.detailCard) != workLane {
+	if u.detailCard.Status != board.Starting || cardLane(*u.detailCard) != workLane {
 		t.Fatalf("実装開始時の列: %+v", u.detailCard)
 	}
 	key('a')
@@ -121,11 +124,11 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal(prompt)
 	}
 	u.refresh()
-	if c := u.detailCard; c.Status != awaitingResultReview || cardLane(*c) != reviewLane || !strings.Contains(u.hint.GetText(false), "承認して完了") {
+	if c := u.detailCard; c.Status != board.AwaitingResultReview || cardLane(*c) != reviewLane || !strings.Contains(u.hint.GetText(false), "承認して完了") {
 		t.Fatalf("実装結果のレビュー: %+v", c)
 	}
 	review := *u.detailCard
-	if err := startCard(s, "true", review.ID); err == nil {
+	if err := worker.Start(s, "true", review.ID); err == nil {
 		t.Fatal("レビュー中に実装が再起動されました")
 	}
 	u = newBoardUI(s, "true")
@@ -141,31 +144,31 @@ printf '%s' "$ANSWER" > "$result"
 	if u.lane != doneLane {
 		t.Fatal("承認後に完了列へ移動しませんでした")
 	}
-	if err := approveResult(s, review); err == nil {
+	if err := worker.ApproveResult(s, review); err == nil {
 		t.Fatal("同じレビューを二度承認できました")
 	}
-	if c := u.detailCard; c.Status != done || c.Attempt != 3 || c.Design != "設計案B" || c.Result != "実装とテストが完了" || c.Phase != implementationPhase {
+	if c := u.detailCard; c.Status != board.Done || c.Attempt != 3 || c.Design != "設計案B" || c.Result != "実装とテストが完了" || c.Phase != board.ImplementationPhase {
 		t.Fatalf("実装結果: %+v", c)
 	}
 }
 
 func TestDesignFailureRequiresNewDesignBeforeApproval(t *testing.T) {
-	s := store{t.TempDir()}
-	if err := s.edit(func(b *board) error {
-		b.newCard("手動", s.dir, "")
-		b.newCard("定期", s.dir, "定期 #5")
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.NewCard("手動", s.Dir, "")
+		b.NewCard("定期", s.Dir, "定期 #5")
 		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	b, err := s.read()
+	b, err := s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := launchFromDetail(s, "true", b.Cards[1], designPhase, ""); err == nil {
+	if err := worker.StartPhase(s, "true", b.Cards[1], board.DesignPhase, ""); err == nil {
 		t.Fatal("定期カードが設計モードに入りました")
 	}
-	if err := launchFromDetail(s, "true", b.Cards[0], designPhase, ""); err != nil {
+	if err := worker.StartPhase(s, "true", b.Cards[0], board.DesignPhase, ""); err != nil {
 		t.Fatal(err)
 	}
 	bin := t.TempDir()
@@ -175,33 +178,33 @@ func TestDesignFailureRequiresNewDesignBeforeApproval(t *testing.T) {
 	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
 	t.Setenv("FACTORY_CARD", "1")
 	t.Setenv("FACTORY_ATTEMPT", "1")
-	if err := runWorker(s); err != nil {
+	if err := worker.Run(s); err != nil {
 		t.Fatal(err)
 	}
-	b, err = s.read()
+	b, err = s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
 	c := b.Cards[0]
-	if c.Status != failed || c.Design != "" || !c.canStartDesign() {
+	if c.Status != board.Failed || c.Design != "" || !c.CanStartDesign() {
 		t.Fatalf("設計案が空の実行: %+v", c)
 	}
-	if err := launchFromDetail(s, "true", c, implementationPhase, ""); err == nil {
+	if err := worker.StartPhase(s, "true", c, board.ImplementationPhase, ""); err == nil {
 		t.Fatal("失敗した設計を承認できました")
 	}
-	if err := startCard(s, "true", c.ID); err != nil {
+	if err := worker.Start(s, "true", c.ID); err != nil {
 		t.Fatal(err)
 	}
-	b, err = s.read()
-	if err != nil || b.Cards[0].Phase != designPhase {
+	b, err = s.Read()
+	if err != nil || b.Cards[0].Phase != board.DesignPhase {
 		t.Fatal("設計として再試行されませんでした")
 	}
 }
 
 func TestIncompleteDesignHasNoReviewShortcuts(t *testing.T) {
-	u := newBoardUI(store{t.TempDir()}, "true")
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "true")
 	u.read("カードの詳細", "", 0)
-	u.renderCardDetail(card{ID: 1, Status: awaitingReview, Phase: designPhase})
+	u.renderCardDetail(board.Card{ID: 1, Status: board.AwaitingDesignReview, Phase: board.DesignPhase})
 	if hint := u.hint.GetText(false); strings.Contains(hint, "承認して実装") || strings.Contains(hint, "再設計") {
 		t.Fatalf("設計案が空なのにレビュー操作が表示されました: %s", hint)
 	}

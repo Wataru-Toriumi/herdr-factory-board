@@ -1,20 +1,24 @@
-package main
+package tui
 
 import (
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/command"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 func TestCardSelectionFollowsWorkerAcrossColumns(t *testing.T) {
-	u := newBoardUI(store{t.TempDir()}, "")
-	cards := []card{{ID: 1, Status: todo}, {ID: 2, Status: todo}, {ID: 3, Status: done}}
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	cards := []board.Card{{ID: 1, Status: board.Todo}, {ID: 2, Status: board.Todo}, {ID: 3, Status: board.Done}}
 	u.renderTasks(cards)
 	u.lists[0].SetCurrentItem(1)
-	for _, status := range []string{starting, running, done} {
+	for _, status := range []string{board.Starting, board.Running, board.Done} {
 		cards[1].Status = status
 		u.renderTasks(cards)
 		selected, ok := u.selectedCard()
@@ -25,8 +29,8 @@ func TestCardSelectionFollowsWorkerAcrossColumns(t *testing.T) {
 }
 
 func TestFailedAndCanceledCardsShareLane(t *testing.T) {
-	u := newBoardUI(store{t.TempDir()}, "")
-	u.renderTasks([]card{{ID: 1, Status: failed, Source: "定期 #3"}, {ID: 2, Status: canceled}})
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	u.renderTasks([]board.Card{{ID: 1, Status: board.Failed, Source: "定期 #3"}, {ID: 2, Status: board.Canceled}})
 	list := u.lists[failedOrCanceledLane]
 	if list.GetItemCount() != 2 {
 		t.Fatalf("失敗・中止のカード数 = %d", list.GetItemCount())
@@ -50,10 +54,10 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 		{"作業先の選択", 'p', "directory"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s := store{t.TempDir()}
+			s := store.Store{Dir: t.TempDir()}
 			u := newBoardUI(s, "")
-			u.workDir = s.dir
-			cards := []card{{ID: 1, Status: todo, Dir: s.dir}}
+			u.workDir = s.Dir
+			cards := []board.Card{{ID: 1, Status: board.Todo, Dir: s.Dir}}
 			u.renderTasks(cards)
 			u.key(tcell.NewEventKey(tcell.KeyRune, tc.key, 0))
 			page, view := u.pages.GetFrontPage()
@@ -63,7 +67,7 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 			if tc.key == ':' {
 				view = u.input
 			}
-			cards[0].Status = running
+			cards[0].Status = board.Running
 			u.renderTasks(cards)
 			if u.app.GetFocus() != view {
 				t.Fatal("カードの列移動で操作中の画面からフォーカスが外れました")
@@ -77,8 +81,8 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 }
 
 func TestAutomationTabManagesDailySchedule(t *testing.T) {
-	s := store{t.TempDir()}
-	t.Setenv("HOME", s.dir)
+	s := store.Store{Dir: t.TempDir()}
+	t.Setenv("HOME", s.Dir)
 	u := newBoardUI(s, "true")
 	press := func(key tcell.Key) { u.key(tcell.NewEventKey(key, 0, 0)) }
 	typeKey := func(ch rune) { u.key(tcell.NewEventKey(tcell.KeyRune, ch, 0)) }
@@ -95,12 +99,12 @@ func TestAutomationTabManagesDailySchedule(t *testing.T) {
 	}
 	u.input.SetText("daily 09:00 テスト")
 	press(tcell.KeyEnter)
-	b, err := s.read()
+	b, err := s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
 	r, ok := u.schedules.selected()
-	if !ok || r.Prompt != "テスト" || r.Dir != s.dir || r.Time != "09:00" || len(b.Cards) != 0 {
+	if !ok || r.Prompt != "テスト" || r.Dir != s.Dir || r.Time != "09:00" || len(b.Cards) != 0 {
 		t.Fatalf("登録後のボード: %+v", b)
 	}
 
@@ -116,7 +120,7 @@ func TestAutomationTabManagesDailySchedule(t *testing.T) {
 	}
 	typeKey('x')
 	press(tcell.KeyEnter)
-	b, err = s.read()
+	b, err = s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,9 +136,9 @@ func TestAutomationTabManagesDailySchedule(t *testing.T) {
 }
 
 func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
-	s := store{t.TempDir()}
-	if err := s.edit(func(b *board) error {
-		b.Schedules = []schedule{{ID: 1}, {ID: 2}, {ID: 3}}
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.Schedules = []schedule.Rule{{ID: 1}, {ID: 2}, {ID: 3}}
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -143,7 +147,7 @@ func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
 	u.refresh()
 	u.key(tcell.NewEventKey(tcell.KeyBacktab, 0, 0))
 	u.schedules.SetCurrentItem(1)
-	if _, err := parseCommand("remove 1").run(s, "true", s.dir); err != nil {
+	if _, err := command.Parse("remove 1").Run(s, "true", s.Dir); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
@@ -157,8 +161,8 @@ func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
 }
 
 func TestAutomationTabIntervalShortcut(t *testing.T) {
-	s := store{t.TempDir()}
-	if err := registerProject(s, s.dir); err != nil {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.RegisterProject(s.Dir); err != nil {
 		t.Fatal(err)
 	}
 	u := newBoardUI(s, "true")
@@ -180,14 +184,14 @@ func TestAutomationTabIntervalShortcut(t *testing.T) {
 }
 
 func TestEditIntervalFromAutomationTab(t *testing.T) {
-	s := store{t.TempDir()}
+	s := store.Store{Dir: t.TempDir()}
 	original := time.Now().Add(time.Minute)
-	if err := s.edit(func(b *board) error {
+	if err := s.Edit(func(b *board.State) error {
 		b.NextID = 3
-		b.Cards = []card{{ID: 3, Prompt: "履歴", Status: done}}
-		b.Schedules = []schedule{
+		b.Cards = []board.Card{{ID: 3, Prompt: "履歴", Status: board.Done}}
+		b.Schedules = []schedule.Rule{
 			{ID: 1, Time: "09:00"},
-			{ID: 2, Prompt: "差分の確認", Dir: s.dir, Interval: &scheduleInterval{Minutes: 1, NextRun: original}},
+			{ID: 2, Prompt: "差分の確認", Dir: s.Dir, Interval: &schedule.Interval{Minutes: 1, NextRun: original}},
 		}
 		return nil
 	}); err != nil {
@@ -215,14 +219,14 @@ func TestEditIntervalFromAutomationTab(t *testing.T) {
 		t.Fatal("入力エラーを修正できません")
 	}
 	// 編集中に先頭の予定が消えても、保存対象は同じ番号の予定。
-	if _, err := parseCommand("remove 1").run(s, "true", s.dir); err != nil {
+	if _, err := command.Parse("remove 1").Run(s, "true", s.Dir); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
 	before := time.Now()
 	u.input.SetText("15m")
 	press(tcell.KeyEnter)
-	b, err := s.read()
+	b, err := s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,10 +234,10 @@ func TestEditIntervalFromAutomationTab(t *testing.T) {
 		t.Fatalf("更新後の履歴: %+v", b)
 	}
 	r := b.Schedules[0]
-	if u.activePage() != "automation" || r.ID != 2 || r.Prompt != "差分の確認" || r.Dir != s.dir || r.Interval.Minutes != 15 {
+	if u.activePage() != "automation" || r.ID != 2 || r.Prompt != "差分の確認" || r.Dir != s.Dir || r.Interval.Minutes != 15 {
 		t.Fatalf("更新後の予定: %+v", r)
 	}
-	if r.Interval.NextRun.Before(before.Add(15*time.Minute)) || r.Interval.NextRun.After(time.Now().Add(15*time.Minute)) || due(r, original) {
+	if r.Interval.NextRun.Before(before.Add(15*time.Minute)) || r.Interval.NextRun.After(time.Now().Add(15*time.Minute)) || r.Due(original) {
 		t.Fatalf("次回の実行時刻: %v", r.Interval.NextRun)
 	}
 	edit()
@@ -245,14 +249,14 @@ func TestEditIntervalFromAutomationTab(t *testing.T) {
 }
 
 func TestTimingFromTaskDetail(t *testing.T) {
-	s := store{t.TempDir()}
-	if err := s.edit(func(b *board) error {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
 		b.NextID = 5
-		b.Schedules = []schedule{{ID: 1, Time: "08:00"}, {ID: 2, Interval: &scheduleInterval{Minutes: 1}}}
-		b.Cards = []card{
-			{ID: 3, Status: done, Source: "定期 #2 2026-11-23 10:00", Result: "実行結果"},
-			{ID: 4, Status: running, ScheduleID: 2},
-			{ID: 5, Status: todo},
+		b.Schedules = []schedule.Rule{{ID: 1, Time: "08:00"}, {ID: 2, Interval: &schedule.Interval{Minutes: 1}}}
+		b.Cards = []board.Card{
+			{ID: 3, Status: board.Done, Source: "定期 #2 2026-11-23 10:00", Result: "実行結果"},
+			{ID: 4, Status: board.Running, ScheduleID: 2},
+			{ID: 5, Status: board.Todo},
 		}
 		return nil
 	}); err != nil {
@@ -284,7 +288,7 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	if text := u.detail.GetText(false); u.activePage() != "detail" || !strings.Contains(text, "#4") || !strings.Contains(text, "15分おき") {
 		t.Fatalf("取り消し後のタスク詳細: %s", text)
 	}
-	if _, err := parseCommand("remove 2").run(s, "true", s.dir); err != nil {
+	if _, err := command.Parse("remove 2").Run(s, "true", s.Dir); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
