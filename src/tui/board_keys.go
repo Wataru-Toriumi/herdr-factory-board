@@ -147,7 +147,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		if key == tcell.KeyBacktab {
 			step = -1
 		}
-		u.tab = (u.tab + step + len(tabLabels)) % len(tabLabels)
+		u.tab = (u.tab + step + len(u.tabs)) % len(u.tabs)
 		u.notice.SetText("")
 		u.switchView()
 	case tcell.KeyLeft, tcell.KeyRight:

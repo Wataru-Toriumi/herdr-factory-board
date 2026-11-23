@@ -77,7 +77,7 @@ func (u *boardUI) selectLane(lane int) {
 		u.lane = lane
 		u.layoutColumns()
 		// 入力欄や詳細画面を操作中でも、戻ったときに表示する列は更新する。
-		if u.activePage() == "tasks" {
+		if u.activePage() == u.tabs[taskTab].page {
 			u.app.SetFocus(u.lists[lane])
 		}
 	}

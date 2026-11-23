@@ -2,8 +2,6 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
@@ -50,14 +48,6 @@ func cardLane(c board.Card) int {
 	}
 }
 
-const (
-	taskTab = iota
-	agentTab
-	automationTab
-)
-
-var tabLabels = [...]string{"タスク", "エージェント", "自動化"}
-
 type boardUI struct {
 	app                                   *tview.Application
 	store                                 store.Store
@@ -79,6 +69,7 @@ type boardUI struct {
 	detailBody                            string
 	detailCard                            *board.Card
 	spaces                                []herdr.Workspace
+	tabs                                  []tabView
 	tab                                   int
 	lane                                  int
 	compact                               bool
@@ -118,7 +109,8 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 	u.layoutColumns()
 	u.agents.SetTitle(" エージェント ").SetTitleAlign(tview.AlignLeft)
 	u.detail.SetBorder(true).SetTitleAlign(tview.AlignLeft)
-	u.pages.AddPage("tasks", u.columns, true, true).AddPage("agents", u.agents, true, false).AddPage("automation", u.schedules, true, false).AddPage("detail", u.detail, true, false)
+	u.registerTabs()
+	u.pages.AddPage("detail", u.detail, true, false)
 	u.footer.AddPage("keys", u.hint, true, true).AddPage("input", u.input, true, false)
 	root := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(u.header, 1, 0, false).AddItem(u.context, 1, 0, false).
@@ -172,36 +164,6 @@ func (u *boardUI) activePage() string {
 	}
 	page, _ := u.pages.GetFrontPage()
 	return page
-}
-
-func (u *boardUI) switchView() {
-	u.editor = inputSession{}
-	u.detailScheduleID = 0
-	u.detailBody = ""
-	u.detailCard = nil
-	u.footer.SwitchToPage("keys")
-	switch u.tab {
-	case agentTab:
-		u.pages.SwitchToPage("agents")
-		u.app.SetFocus(u.agents)
-		u.hint.SetText("Tab 切替   ↑↓ 選択   Enter ペインへ   ? ヘルプ   q 閉じる")
-	case automationTab:
-		u.pages.SwitchToPage("automation")
-		u.app.SetFocus(u.schedules)
-		u.hint.SetText("n 毎日  i 間隔  t 変更  p プロジェクト  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
-	default:
-		u.pages.SwitchToPage("tasks")
-		u.app.SetFocus(u.lists[u.lane])
-		u.hint.SetText("v 詳細  n 追加  p プロジェクト  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる")
-	}
-	u.updateHeader()
-	u.showWorkDir()
-}
-
-func (u *boardUI) updateHeader() {
-	labels := tabLabels
-	labels[u.tab] = "[black:aqua:b] " + labels[u.tab] + " [-:-:-]"
-	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", strings.Join(labels[:], "  "), u.agents.blockedCount()))
 }
 
 func (u *boardUI) refresh() {

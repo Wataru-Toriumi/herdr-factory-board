@@ -371,3 +371,26 @@ func TestDetailRefreshShowsUpdatedCardAndSchedule(t *testing.T) {
 		t.Fatalf("完了した定期カードの操作案内: %s", hint)
 	}
 }
+
+func TestTabNavigationRestoresPageHintAndFocus(t *testing.T) {
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	u.key(tcell.NewEventKey(tcell.KeyRight, 0, 0))
+	for _, tc := range []struct {
+		key               tcell.Key
+		page, label, hint string
+		focus             tview.Primitive
+	}{
+		{tcell.KeyTab, "agents", "エージェント", "Enter ペインへ", u.agents},
+		{tcell.KeyTab, "automation", "自動化", "i 間隔", u.schedules},
+		{tcell.KeyTab, "tasks", "タスク", "v 詳細", u.lists[designLane]},
+		{tcell.KeyBacktab, "automation", "自動化", "i 間隔", u.schedules},
+	} {
+		u.key(tcell.NewEventKey(tc.key, 0, 0))
+		if u.activePage() != tc.page || u.app.GetFocus() != tc.focus {
+			t.Fatalf("%s の表示先またはフォーカスが違います: %s", tc.label, u.activePage())
+		}
+		if !strings.Contains(u.header.GetText(false), "[black:aqua:b] "+tc.label+" [-:-:-]") || !strings.Contains(u.hint.GetText(false), tc.hint) {
+			t.Fatalf("%s の見出しまたは操作案内が違います: %s, %s", tc.label, u.header.GetText(false), u.hint.GetText(false))
+		}
+	}
+}
