@@ -1,13 +1,13 @@
 package tui
 
 import (
-	"fmt"
-
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/detail"
 )
 
 func (u *boardUI) openCardDetail(c board.Card) {
-	u.openDetail("カードの詳細", cardDetailText(c), c.SourceScheduleID(), &c)
+	u.openDetail("カードの詳細", detail.CardText(c), c.SourceScheduleID(), &c)
 }
 
 func (u *boardUI) openDetail(title, body string, scheduleID int, card *board.Card) {
@@ -24,7 +24,7 @@ func (u *boardUI) refreshDetail(b board.State) {
 		if c, err := b.FindCard(u.detailCard.ID); err == nil && *c != *u.detailCard {
 			card := *c
 			u.detailCard = &card
-			u.detailBody = cardDetailText(card)
+			u.detailBody = detail.CardText(card)
 			u.renderDetail()
 			return
 		}
@@ -37,45 +37,15 @@ func (u *boardUI) refreshDetail(b board.State) {
 
 func (u *boardUI) renderDetail() {
 	text := u.detailBody
-	hasSchedule := false
+	var rule *schedule.Rule
 	if id := u.detailScheduleID; id != 0 {
-		timing := "解除済み"
 		if r, ok := u.schedules.byID(id); ok {
-			timing = r.Frequency()
-			hasSchedule = true
-			if u.detailCard == nil {
-				timing += "  担当: " + board.AgentLabel(r.Agent)
-			}
+			rule = &r
 		}
-		text = fmt.Sprintf("定期実行 #%d  %s\n\n%s", id, timing, text)
+		text = detail.ScheduleText(text, id, rule, u.detailCard == nil)
 	}
 	if u.detail.GetText(false) != text {
 		u.detail.SetText(text)
 	}
-	u.setDetailHint(hasSchedule)
-}
-
-func cardDetailText(c board.Card) string {
-	body := fmt.Sprintf("#%d  %s\n担当: %s\n作業先: %s\n%s", c.ID, c.Status, board.AgentLabel(c.Agent), c.Dir, c.Prompt)
-	if phase := c.PhaseLabel(); phase != "" {
-		body += "\n\n" + phase
-	}
-	if c.Design != "" {
-		body += "\n\n設計案\n" + c.Design
-	}
-	if c.Feedback != "" {
-		body += "\n\nレビューコメント\n" + c.Feedback
-	}
-	if c.ImplementationFeedback != "" {
-		if c.PreviousResult != "" {
-			body += "\n\n前回の実装結果\n" + c.PreviousResult
-		}
-		body += "\n\n実装の修正依頼\n" + c.ImplementationFeedback
-	}
-	if c.Phase != "" && c.Result != "" {
-		body += "\n\n実行結果\n" + c.Result
-	} else {
-		body += "\n" + c.Result
-	}
-	return body
+	u.hint.SetText(detail.Shortcuts(u.detailCard, rule != nil).Hint())
 }
