@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/command"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/gdamore/tcell/v2"
@@ -120,19 +119,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	case "input":
 		return u.inputKey(event)
 	case "detail":
-		if key == tcell.KeyRune && u.cardKey(event.Rune()) {
-			return nil
-		}
-		if key == tcell.KeyRune && event.Rune() == 'g' && u.detailCard == nil {
-			if r, ok := u.schedules.byID(u.detailScheduleID); ok {
-				u.finishDetailAction(scheduler.ChangeAgent(u.store, r.ID, r.Agent, nextAgent(r.Agent)))
-			}
-			return nil
-		}
-		if key == tcell.KeyRune && event.Rune() == 't' {
-			if r, ok := u.schedules.byID(u.detailScheduleID); ok {
-				u.editScheduleTiming(r)
-			}
+		if key == tcell.KeyRune && u.detailKey(event.Rune()) {
 			return nil
 		}
 		if key == tcell.KeyEscape {

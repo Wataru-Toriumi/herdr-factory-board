@@ -37,15 +37,14 @@ func (u *boardUI) refreshDetail(b board.State) {
 
 func (u *boardUI) renderDetail() {
 	text := u.detailBody
-	hint := "↑↓ スクロール   Esc 戻る"
+	hasSchedule := false
 	if id := u.detailScheduleID; id != 0 {
 		timing := "解除済み"
 		if r, ok := u.schedules.byID(id); ok {
 			timing = r.Frequency()
-			hint = "t 定期実行の設定変更   " + hint
+			hasSchedule = true
 			if u.detailCard == nil {
 				timing += "  担当: " + board.AgentLabel(r.Agent)
-				hint = "g 担当を変更   " + hint
 			}
 		}
 		text = fmt.Sprintf("定期実行 #%d  %s\n\n%s", id, timing, text)
@@ -53,7 +52,7 @@ func (u *boardUI) renderDetail() {
 	if u.detail.GetText(false) != text {
 		u.detail.SetText(text)
 	}
-	u.setCardHint(hint)
+	u.setDetailHint(hasSchedule)
 }
 
 func cardDetailText(c board.Card) string {
