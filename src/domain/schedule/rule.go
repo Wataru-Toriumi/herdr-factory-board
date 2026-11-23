@@ -44,6 +44,14 @@ func (r Rule) TimingKind() string {
 	return Daily
 }
 
+// TimingValue は編集できる設定値を返す。実行に伴って変わる次回時刻は含めない。
+func (r Rule) TimingValue() string {
+	if r.Interval != nil {
+		return fmt.Sprintf("%dm", r.Interval.Minutes)
+	}
+	return r.Time
+}
+
 // SetTiming は毎日の実行時刻または実行間隔を設定する。
 func (r *Rule) SetTiming(kind, when string, now time.Time) error {
 	if kind == Every {

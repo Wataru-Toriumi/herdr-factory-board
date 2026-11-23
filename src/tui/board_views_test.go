@@ -437,3 +437,56 @@ func TestTaskLaneTitlesAndSelectionColors(t *testing.T) {
 		t.Fatal("最後の列から未着手に戻れませんでした")
 	}
 }
+
+func TestTimingConflictReloadsCurrentSetting(t *testing.T) {
+	for _, tc := range []struct {
+		name                string
+		rule                schedule.Rule
+		newValue, nextValue string
+	}{
+		{"毎日", schedule.Rule{Time: "09:00"}, "10:30", "11:00"},
+		{"間隔", schedule.Rule{Interval: &schedule.Interval{Minutes: 15}}, "30m", "45m"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := store.Store{Dir: t.TempDir()}
+			if err := s.Edit(func(b *board.State) error { b.AddSchedule(tc.rule); return nil }); err != nil {
+				t.Fatal(err)
+			}
+			left, right := newBoardUI(s, "true"), newBoardUI(s, "true")
+			for _, u := range []*boardUI{left, right} {
+				u.refresh()
+				u.key(tcell.NewEventKey(tcell.KeyBacktab, 0, 0))
+				u.key(tcell.NewEventKey(tcell.KeyRune, 't', 0))
+			}
+			enter := tcell.NewEventKey(tcell.KeyEnter, 0, 0)
+			right.input.SetText(tc.newValue)
+			right.key(enter)
+			left.key(enter)
+			b, err := s.Read()
+			if err != nil || b.Schedules[0].TimingValue() != tc.newValue {
+				t.Fatalf("競合後の保存内容: %+v, %v", b, err)
+			}
+			if left.activePage() != "input" || left.input.GetText() != tc.newValue || !strings.Contains(left.notice.GetText(false), "別のペイン") {
+				t.Fatalf("競合後の入力欄 = %q, 通知 = %q", left.input.GetText(), left.notice.GetText(false))
+			}
+			// 実行履歴だけが更新されても、最新の設定を見てやり直した編集は保存できる。
+			if err := s.Edit(func(b *board.State) error {
+				r := &b.Schedules[0]
+				if r.Interval != nil {
+					r.Interval.NextRun = r.Interval.NextRun.Add(time.Hour)
+				} else {
+					r.LastDate = time.Now().Format("2006-01-02")
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			left.input.SetText(tc.nextValue)
+			left.key(enter)
+			b, err = s.Read()
+			if err != nil || b.Schedules[0].TimingValue() != tc.nextValue || left.activePage() != "automation" {
+				t.Fatalf("競合解消後の保存: %+v, %v", b, err)
+			}
+		})
+	}
+}
