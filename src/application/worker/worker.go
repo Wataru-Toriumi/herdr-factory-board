@@ -34,13 +34,7 @@ func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card
 		if err := prepare(c); err != nil {
 			return err
 		}
-		if c.Status == board.Todo && c.ReopenCount > 0 {
-			// 再オープン前の記録は、新しい作業を開始するまで詳細画面に残す。
-			c.Design, c.Feedback, c.ImplementationFeedback, c.PreviousResult = "", "", "", ""
-		}
-		c.Attempt++
-		attempt = c.Attempt
-		c.Status, c.Pane, c.Result = board.Starting, "", ""
+		attempt = c.QueueAttempt()
 		return nil
 	})
 	if err != nil {
@@ -51,9 +45,7 @@ func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card
 		return nil
 	}
 	saveErr := s.EditCard(id, func(c *board.Card) error {
-		if c.Attempt == attempt && c.Status == board.Starting {
-			c.Status, c.Result = board.Failed, launchErr.Error()
-		}
+		c.FailAttemptLaunch(attempt, launchErr.Error())
 		return nil
 	})
 	return errors.Join(launchErr, saveErr)
@@ -87,10 +79,9 @@ func Run(s store.Store) error {
 	defer stop()
 	var task board.Card
 	err = s.EditCard(id, func(c *board.Card) error {
-		if c.Attempt != attempt || c.Status != board.Starting {
+		if !c.MarkAttemptRunning(attempt, os.Getenv("HERDR_PANE_ID")) {
 			return errors.New("この起動要求は無効です")
 		}
-		c.Status, c.Pane = board.Running, os.Getenv("HERDR_PANE_ID")
 		task = *c
 		return nil
 	})
