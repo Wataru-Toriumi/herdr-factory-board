@@ -10,3 +10,7 @@ Herdr TUI で作業をカードにして Codex に渡すプラグインです。
 - [ボードの操作とカードの実行](docs/board.md)
 - [定期実行](docs/automation.md)
 - [開発環境とコードの構成](docs/development.md)
+
+## ライセンス
+
+[MIT License](LICENSE)
