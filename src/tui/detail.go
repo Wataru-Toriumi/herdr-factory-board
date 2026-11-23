@@ -39,7 +39,7 @@ func (u *boardUI) renderDetail() {
 	text := u.detailBody
 	var rule *schedule.Rule
 	if id := u.detailScheduleID; id != 0 {
-		if r, ok := u.schedules.byID(id); ok {
+		if r, ok := u.schedules.model.ByID(id); ok {
 			rule = &r
 		}
 		text = detail.ScheduleText(text, id, rule, u.detailCard == nil)

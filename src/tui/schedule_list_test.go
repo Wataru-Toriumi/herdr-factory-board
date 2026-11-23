@@ -14,7 +14,7 @@ func TestScheduleListRefreshesLookupOutsideVisibleProject(t *testing.T) {
 
 	api.Time = "11:00"
 	list.render([]schedule.Rule{api, web}, web.Dir, false, nil)
-	if r, ok := list.byID(api.ID); !ok || r.Time != api.Time {
+	if r, ok := list.model.ByID(api.ID); !ok || r.Time != api.Time {
 		t.Fatalf("表示対象外の予定の更新が反映されていません: %+v", r)
 	}
 	if r, ok := list.selected(); !ok || r.ID != web.ID || list.GetItemCount() != 1 {

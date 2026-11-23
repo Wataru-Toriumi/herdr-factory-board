@@ -36,11 +36,11 @@ func (u *boardUI) runDetailAction(action detail.Action) {
 	case detail.ReopenCard:
 		u.reopenDetail()
 	case detail.ChangeScheduleAgent:
-		if r, ok := u.schedules.byID(u.detailScheduleID); ok {
+		if r, ok := u.schedules.model.ByID(u.detailScheduleID); ok {
 			u.finishDetailAction(scheduler.ChangeAgent(u.store, r.ID, r.Agent, nextAgent(r.Agent)))
 		}
 	case detail.EditTiming:
-		if r, ok := u.schedules.byID(u.detailScheduleID); ok {
+		if r, ok := u.schedules.model.ByID(u.detailScheduleID); ok {
 			u.editScheduleTiming(r)
 		}
 	}
