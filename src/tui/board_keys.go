@@ -156,7 +156,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			if key == tcell.KeyLeft {
 				direction = -1
 			}
-			u.selectLane((u.lane + direction + len(laneNames)) % len(laneNames))
+			u.selectLane((u.lane + direction + len(taskLanes)) % len(taskLanes))
 		}
 	case tcell.KeyEnter:
 		u.activate()

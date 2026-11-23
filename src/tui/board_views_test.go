@@ -37,7 +37,7 @@ func TestCompactBoardFollowsLaneSelection(t *testing.T) {
 	check := func(lane int) {
 		t.Helper()
 		if u.columns.GetItemCount() != 1 || u.columns.GetItem(0) != u.lists[lane] || u.app.GetFocus() != u.lists[lane] {
-			t.Fatalf("表示列とフォーカスが %s に揃っていません", laneNames[lane])
+			t.Fatalf("表示列とフォーカスが %s に揃っていません", taskLanes[lane].name)
 		}
 	}
 	u.key(tcell.NewEventKey(tcell.KeyLeft, 0, 0))
@@ -392,5 +392,31 @@ func TestTabNavigationRestoresPageHintAndFocus(t *testing.T) {
 		if !strings.Contains(u.header.GetText(false), "[black:aqua:b] "+tc.label+" [-:-:-]") || !strings.Contains(u.hint.GetText(false), tc.hint) {
 			t.Fatalf("%s の見出しまたは操作案内が違います: %s, %s", tc.label, u.header.GetText(false), u.hint.GetText(false))
 		}
+	}
+}
+
+func TestTaskLaneTitlesAndSelectionColors(t *testing.T) {
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	u.renderTasks(nil)
+	for _, want := range []struct {
+		title string
+		color tcell.Color
+	}{
+		{" 未着手 0 ", tcell.ColorLightSkyBlue},
+		{" 設計中 0 ", tcell.ColorPlum},
+		{" 設計完了 0 ", tcell.ColorLavender},
+		{" 進行中 0 ", tcell.ColorGold},
+		{" レビュー中 0 ", tcell.ColorLightCyan},
+		{" 完了 0 ", tcell.ColorLightGreen},
+		{" 失敗・中止 0 ", tcell.ColorLightCoral},
+	} {
+		list := u.lists[u.lane]
+		if list.GetTitle() != want.title || list.GetBorderColor() != want.color {
+			t.Fatalf("選択中の列 = %q (%v), 期待値 = %q (%v)", list.GetTitle(), list.GetBorderColor(), want.title, want.color)
+		}
+		u.key(tcell.NewEventKey(tcell.KeyRight, 0, 0))
+	}
+	if u.lane != todoLane {
+		t.Fatal("最後の列から未着手に戻れませんでした")
 	}
 }
