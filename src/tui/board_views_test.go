@@ -337,4 +337,10 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	if u.input.GetText() != "08:00" {
 		t.Fatal("自動化タブの詳細から時刻を編集できません")
 	}
+	u.input.SetText(" 10:30 ")
+	press(tcell.KeyEnter)
+	daily, ok := u.schedules.byID(1)
+	if !ok || daily.Time != "10:30" || daily.Interval != nil || u.activePage() != "detail" {
+		t.Fatalf("時刻変更後の毎日の予定: %+v", daily)
+	}
 }

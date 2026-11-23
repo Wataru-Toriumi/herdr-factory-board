@@ -9,6 +9,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
@@ -39,7 +40,7 @@ func (cmd Command) Run(s store.Store, herdr, dir string) (*board.Card, error) {
 			b.NewCard(arg, dir, "")
 			return nil
 		})
-	case "daily", "every":
+	case schedule.Daily, schedule.Every:
 		return nil, scheduler.Register(s, herdr, dir, cmd.Name, arg)
 	case "scheduler":
 		return nil, scheduler.EnsureRunning(s, herdr)

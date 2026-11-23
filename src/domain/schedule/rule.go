@@ -30,9 +30,22 @@ type Interval struct {
 	NextRun time.Time
 }
 
+const (
+	Daily = "daily"
+	Every = "every"
+)
+
+// TimingKind は保存済みの予定の種類を返す。間隔の情報がない旧形式の予定も毎日実行として扱う。
+func (r Rule) TimingKind() string {
+	if r.Interval != nil {
+		return Every
+	}
+	return Daily
+}
+
 // SetTiming は毎日の実行時刻または実行間隔を設定する。
 func (r *Rule) SetTiming(kind, when string, now time.Time) error {
-	if kind == "every" {
+	if kind == Every {
 		period, err := time.ParseDuration(when)
 		if err != nil || period < time.Minute || period%time.Minute != 0 {
 			return errors.New("間隔は 15m のように1分単位で指定してください")
