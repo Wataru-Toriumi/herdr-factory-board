@@ -61,7 +61,7 @@ func approveResult(s store, seen card) error {
 // レビューで表示した版と保存済みのカードをロック内で照合し、別の設計案の承認を防ぐ。
 func launchFromDetail(s store, herdr string, seen card, phase, feedback string) error {
 	return launchCard(s, herdr, seen.ID, func(c *card) error {
-		if c.Attempt != seen.Attempt || c.Status != seen.Status {
+		if c.Attempt != seen.Attempt || c.Status != seen.Status || c.Dir != seen.Dir {
 			return errors.New("カードが更新されました。最新の詳細を確認してください")
 		}
 		switch phase {

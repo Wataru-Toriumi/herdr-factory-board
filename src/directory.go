@@ -7,16 +7,15 @@ import (
 	"github.com/rivo/tview"
 )
 
-func (u *boardUI) pickDirectory(nextCommand string) {
-	start := u.workDir
+func (u *boardUI) pickDirectory(start string, choose func(string)) {
 	if start != "" {
-		if err := u.browseDirectory(start, nextCommand); err == nil {
+		if err := u.browseDirectory(start, choose); err == nil {
 			return
 		}
 	}
 	home, err := os.UserHomeDir()
 	if err == nil {
-		err = u.browseDirectory(home, nextCommand)
+		err = u.browseDirectory(home, choose)
 	}
 	if err != nil {
 		u.notice.SetText(err.Error())
@@ -26,11 +25,17 @@ func (u *boardUI) pickDirectory(nextCommand string) {
 func (u *boardUI) closeDirectory() {
 	u.pages.RemovePage("directory")
 	u.notice.SetText("")
-	u.showWorkDir()
+	if u.detailCard != nil {
+		u.pages.SwitchToPage("detail")
+		u.renderCardDetail(*u.detailCard)
+		u.app.SetFocus(u.detail)
+		u.showWorkDir()
+		return
+	}
 	u.switchView()
 }
 
-func (u *boardUI) browseDirectory(path string, nextCommand string) error {
+func (u *boardUI) browseDirectory(path string, choose func(string)) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return err
@@ -39,19 +44,15 @@ func (u *boardUI) browseDirectory(path string, nextCommand string) error {
 	list := boardList().ShowSecondaryText(false)
 	list.SetTitle(" 作業先を選択 ").SetTitleAlign(tview.AlignLeft)
 	list.AddItem("このフォルダを作業先にする", "", 0, func() {
-		if err := setWorkDir(u.store, path); err != nil {
+		if err := registerProject(u.store, path); err != nil {
 			u.notice.SetText(err.Error())
 			return
 		}
-		u.workDir = path
-		u.closeDirectory()
-		if nextCommand != "" {
-			u.edit(nextCommand)
-		}
+		choose(path)
 	})
 
 	open := func(next string) {
-		if err := u.browseDirectory(next, nextCommand); err != nil {
+		if err := u.browseDirectory(next, choose); err != nil {
 			u.notice.SetText(err.Error())
 		}
 	}

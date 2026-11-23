@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-func setWorkDir(s store, path string) error {
+func registerProject(s store, path string) error {
 	if !filepath.IsAbs(path) {
 		return errors.New("作業先の絶対パスを指定してください")
 	}
@@ -20,30 +21,36 @@ func setWorkDir(s store, path string) error {
 	if !info.IsDir() {
 		return errors.New("作業先はディレクトリを指定してください")
 	}
-	return s.edit(func(b *board) error { b.Dir = filepath.Clean(path); return nil })
+	path = filepath.Clean(path)
+	return s.edit(func(b *board) error {
+		if !slices.Contains(b.Projects, path) {
+			b.Projects = append(b.Projects, path)
+		}
+		return nil
+	})
 }
 
-func command(s store, herdr, line string) (*card, error) {
+func command(s store, herdr, dir, line string) (*card, error) {
 	name, arg, _ := strings.Cut(strings.TrimSpace(line), " ")
 	arg = strings.TrimSpace(arg)
 	switch name {
 	case "":
 		return nil, nil
 	case "dir":
-		return nil, setWorkDir(s, arg)
+		return nil, registerProject(s, arg)
 	case "add":
 		if arg == "" {
 			return nil, errors.New("作業内容を入力してください")
 		}
 		return nil, s.edit(func(b *board) error {
-			if b.Dir == "" {
+			if dir == "" {
 				return errors.New("先に dir で作業先を指定してください")
 			}
-			b.newCard(arg, b.Dir, "")
+			b.newCard(arg, dir, "")
 			return nil
 		})
 	case "daily", "every":
-		return nil, registerSchedule(s, herdr, name, arg)
+		return nil, registerSchedule(s, herdr, dir, name, arg)
 	case "scheduler":
 		return nil, ensureScheduler(s, herdr)
 	case "start", "open", "result", "recover", "remove":
