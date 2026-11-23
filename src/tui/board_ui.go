@@ -2,9 +2,8 @@
 package tui
 
 import (
-	"time"
+	"context"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
@@ -32,7 +31,10 @@ type boardUI struct {
 	detailScheduleID                      int
 	detailBody                            string
 	detailCard                            *board.Card
+	board                                 boardSnapshot
+	panes                                 []herdr.Pane
 	spaces                                []herdr.Workspace
+	sessionError                          string
 	tabs                                  []tabView
 	tab                                   int
 	lane                                  int
@@ -91,22 +93,14 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 }
 
 func Run(s store.Store, herdr string) error {
-	u := newBoardUI(s, herdr)
+	return newBoardUI(s, herdr).run()
+}
+
+func (u *boardUI) run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	u.refresh()
-	stop := make(chan struct{})
-	defer close(stop)
-	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-stop:
-				return
-			case <-ticker.C:
-				u.app.QueueUpdateDraw(u.refresh)
-			}
-		}
-	}()
+	go u.poll(ctx)
 	return u.app.Run()
 }
 
@@ -126,39 +120,6 @@ func (u *boardUI) activePage() string {
 	}
 	page, _ := u.pages.GetFrontPage()
 	return page
-}
-
-func (u *boardUI) refresh() {
-	b, err := u.store.Read()
-	if err != nil {
-		u.notice.SetText(err.Error())
-		return
-	}
-	active, err := scheduler.Running(u.store)
-	u.projects = b.ProjectDirs()
-	u.schedules.render(b.Schedules, u.workDir, active, err)
-	if u.activePage() == "detail" {
-		u.refreshDetail(b)
-	}
-	u.renderTasks(b.Cards)
-	if err != nil {
-		u.notice.SetText(err.Error())
-	}
-	u.showWorkDir()
-
-	panes, err := herdr.ListPanes(u.herdr)
-	if err != nil {
-		u.notice.SetText("ペイン一覧: " + err.Error())
-		return
-	}
-	spaces, err := herdr.ListWorkspaces(u.herdr)
-	if err != nil {
-		u.notice.SetText("ワークスペース一覧: " + err.Error())
-	} else {
-		u.spaces = spaces
-	}
-	u.agents.render(boardAgents(panes, u.spaces, b.Cards))
-	u.updateHeader()
 }
 
 func (u *boardUI) selectedCard() (board.Card, bool) {
