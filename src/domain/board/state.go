@@ -4,6 +4,7 @@ package board
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 )
@@ -20,6 +21,26 @@ func (b *State) NewCard(prompt, dir, source string) *Card {
 	b.NextID++
 	b.Cards = append(b.Cards, Card{ID: b.NextID, Prompt: prompt, Dir: dir, Source: source, Status: Todo})
 	return &b.Cards[len(b.Cards)-1]
+}
+
+func (b State) HasDueSchedule(now time.Time) bool {
+	for _, r := range b.Schedules {
+		if r.Due(now) {
+			return true
+		}
+	}
+	return false
+}
+
+// RecordDueSchedules は期限を迎えた各予定の実行を記録し、対応する履歴カードを作る。
+func (b *State) RecordDueSchedules(now time.Time) {
+	for i := range b.Schedules {
+		r := &b.Schedules[i]
+		if r.Due(now) {
+			source := r.RecordOccurrence(now)
+			b.NewCard(r.Prompt, r.Dir, source).ScheduleID = r.ID
+		}
+	}
 }
 
 func (b *State) FindCard(id int) (*Card, error) {
