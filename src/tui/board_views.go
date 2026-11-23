@@ -86,37 +86,3 @@ func (u *boardUI) highlightLane() {
 		list.SetBorderColor(border)
 	}
 }
-
-var agentStates = map[string]string{
-	"blocked": "入力待ち", "working": "作業中", "idle": "待機中", "done": "完了",
-}
-
-func (u *boardUI) renderAgents(rows []agentRow) {
-	if !reflect.DeepEqual(rows, u.rows) {
-		index := u.agents.GetCurrentItem()
-		var id string
-		if index >= 0 && index < len(u.rows) {
-			id = u.rows[index].pane
-		}
-		u.agents.Clear()
-		for i, r := range rows {
-			if r.pane == id {
-				index = i
-			}
-			state := agentStates[r.status]
-			if state == "" {
-				state = "状態不明"
-			}
-			u.agents.AddItem(tview.Escape(fmt.Sprintf("%s  ·  %s   %s", state, r.name, r.task)), tview.Escape(r.workspace+"   "+r.pane), 0, nil)
-		}
-		if len(rows) > 0 {
-			u.agents.SetCurrentItem(min(max(index, 0), len(rows)-1))
-		}
-		u.rows = rows
-	}
-	u.agents.SetTitle(fmt.Sprintf(" エージェント %d ", len(rows)))
-	if len(rows) == 0 {
-		u.agents.SetTitle(" エージェントなし ")
-	}
-	u.updateHeader()
-}
