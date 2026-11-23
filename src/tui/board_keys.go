@@ -184,9 +184,8 @@ func (u *boardUI) activate() {
 		}
 		return
 	case agentTab:
-		i := u.agents.GetCurrentItem()
-		if i >= 0 && i < len(u.rows) {
-			if err := u.rows[i].focus(u.store, u.herdr); err != nil {
+		if row, ok := u.agents.selected(); ok {
+			if err := row.focus(u.store, u.herdr); err != nil {
 				u.notice.SetText(err.Error())
 			}
 		}

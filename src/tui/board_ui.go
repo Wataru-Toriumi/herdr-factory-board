@@ -65,9 +65,8 @@ type boardUI struct {
 	columns                               *tview.Flex
 	lists                                 []*tview.List
 	cards                                 [][]board.Card
-	agents                                *tview.List
+	agents                                *agentList
 	schedules                             *scheduleList
-	rows                                  []agentRow
 	header, context, hint, notice, detail *tview.TextView
 	input                                 *tview.InputField
 	footer                                *tview.Pages
@@ -107,7 +106,7 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 		hint:      tview.NewTextView().SetWrap(false),
 		input:     tview.NewInputField().SetLabel("> "),
 		footer:    tview.NewPages(),
-		agents:    boardList(),
+		agents:    &agentList{List: boardList()},
 		schedules: &scheduleList{List: boardList()},
 		cards:     make([][]board.Card, len(laneNames)),
 	}
@@ -202,15 +201,9 @@ func (u *boardUI) switchView() {
 }
 
 func (u *boardUI) updateHeader() {
-	blocked := 0
-	for _, r := range u.rows {
-		if r.status == "blocked" {
-			blocked++
-		}
-	}
 	labels := tabLabels
 	labels[u.tab] = "[black:aqua:b] " + labels[u.tab] + " [-:-:-]"
-	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", strings.Join(labels[:], "  "), blocked))
+	u.header.SetText(fmt.Sprintf("[white::b]Factory Board[-:-:-]   %s   [yellow]入力待ち %d件[-]", strings.Join(labels[:], "  "), u.agents.blockedCount()))
 }
 
 func (u *boardUI) refresh() {
@@ -247,7 +240,8 @@ func (u *boardUI) refresh() {
 	} else {
 		u.spaces = spaces
 	}
-	u.renderAgents(boardAgents(panes, u.spaces, b.Cards))
+	u.agents.render(boardAgents(panes, u.spaces, b.Cards))
+	u.updateHeader()
 }
 
 func (u *boardUI) selectedCard() (board.Card, bool) {
