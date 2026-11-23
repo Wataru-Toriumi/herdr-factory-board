@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 func TestWorkerRecordsCodexOutcome(t *testing.T) {

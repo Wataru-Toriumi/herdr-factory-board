@@ -3,8 +3,8 @@ package tui
 import (
 	"testing"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 )
 
 func TestBoardAgents(t *testing.T) {

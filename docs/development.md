@@ -10,14 +10,25 @@ go build -o factory-board ./src
 
 プラグインのビルドと各ペインの起動コマンドは [herdr-plugin.toml](../herdr-plugin.toml) で定義しています。コードを変更したら、`go test ./...` で全パッケージをテストし、再ビルドしてペインを開き直してください。
 
-## パッケージ構成
+## レイヤーと依存方向
 
-- [main.go](../src/main.go) はワークスペースの保存先を開き、起動引数に応じてボード画面、ワーカー、スケジューラーを起動します。
-- [src/tui](../src/tui) はボードの各タブ、カード詳細、作業先の選択、キー操作を担当します。
-- [src/command](../src/command) は入力したコマンドを解析し、カードの追加や定期実行の登録などを実行します。
-- [src/scheduler](../src/scheduler) は定期実行の登録・変更・解除とスケジューラーの起動を担当します。実行時刻を迎えた予定からカードを作り、ワーカーに渡します。
-- [src/board](../src/board) はカードとボードの状態を定義します。設計を開始できる条件、レビューできる条件、ボードに属するプロジェクトの一覧はここで扱います。
-- [src/store](../src/store) はワークスペースごとの `board.json` の読み書きとファイルロックを担当します。`Edit` と `EditCard` はロック内で最新の状態を読み、変更が成功したときに保存します。
-- [src/worker](../src/worker) はカードの起動、Codex の実行、結果の記録、キャンセル、中断からの復旧を担当します。設計案とレビューコメントを実行時のプロンプトに組み込む処理もここにあります。
-- [src/herdr](../src/herdr) は Herdr CLI を呼び出し、ペイン・ワークスペースの一覧取得、タブの起動、フォーカス移動を担当します。
-- [src/schedule](../src/schedule) は毎日決まった時刻に実行する予定と、一定の間隔で実行する予定を扱います。予定が実行時刻を迎えたかを判定し、実行した予定の次回時刻や最終実行日を更新します。
+[main.go](../src/main.go) はワークスペースの保存先を開き、起動引数に応じて TUI、ワーカー、スケジューラーを起動します。その下のコードは4層に分けています。モジュール内で直接 import できるのは、表の同じ行か、それより下の行のパッケージです。
+
+| ディレクトリ | 担当する処理 | パッケージ |
+| --- | --- | --- |
+| `src/tui` | ボードの表示、タブ切り替え、キー入力、作業先の選択 | [tui](../src/tui) |
+| `src/application` | コマンドの実行、予定の登録と起動、カードの実行・キャンセル・復旧 | [command](../src/application/command)、[scheduler](../src/application/scheduler)、[worker](../src/application/worker) |
+| `src/infrastructure` | ワークスペースごとの `board.json` の読み書きとロック、Herdr CLI によるペイン操作 | [store](../src/infrastructure/store)、[herdr](../src/infrastructure/herdr) |
+| `src/domain` | カードの状態と設計・レビューの条件、定期実行の時刻判定と次回時刻の計算 | [board](../src/domain/board)、[schedule](../src/domain/schedule) |
+
+たとえば、`every 15m` の入力は TUI から `command` を経て `scheduler` に届きます。`scheduler` は `schedule` で実行間隔を設定し、`store` で保存します。画面更新の際は、TUI が `store` からボードを、`herdr` からペイン一覧を直接読み取ります。
+
+### 依存ルールの確認
+
+[依存テスト](../src/dependencies_test.go) は層を逆向きに参照する import と、層の外に追加した `src` 配下のパッケージを検出します。個別の制約も確認します。
+
+- `board` が直接 import できるモジュール内のパッケージは `schedule` だけです。
+- `schedule` と `herdr` は標準ライブラリだけを直接 import します。
+- 画面ライブラリの `tview` と `tcell/v2` を直接 import するのは `tui` だけです。
+
+検査対象は現在のビルド環境で使われる本体コードです。全体は `go test ./...`、依存関係だけなら `go test -count=1 -run '^TestPackageDependencies$' ./src` で確認できます。

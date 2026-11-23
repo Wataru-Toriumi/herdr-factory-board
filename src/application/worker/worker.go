@@ -14,9 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/herdr"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 func Start(s store.Store, herdrBin string, id int) error {

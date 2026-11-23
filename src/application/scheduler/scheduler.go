@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/herdr"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 // 稼働確認と起動を直列化し、確認中の一時的なロックを別のスケジューラーの稼働と誤認するのを防ぐ。

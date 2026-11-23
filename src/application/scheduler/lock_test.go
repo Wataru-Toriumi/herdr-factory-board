@@ -3,7 +3,7 @@ package scheduler
 import (
 	"testing"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 func TestSchedulerLockLifecycle(t *testing.T) {

@@ -3,8 +3,8 @@ package tui
 import (
 	"fmt"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 )
 
 func (u *boardUI) renderCardDetail(c board.Card) {

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/command"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/command"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

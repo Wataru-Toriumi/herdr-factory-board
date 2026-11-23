@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 func TestDailyOccurrenceAndRetry(t *testing.T) {

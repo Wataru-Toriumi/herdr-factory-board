@@ -5,8 +5,8 @@ import (
 	"maps"
 	"reflect"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

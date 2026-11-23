@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 type Command struct {
