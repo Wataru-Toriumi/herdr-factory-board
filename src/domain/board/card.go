@@ -19,6 +19,7 @@ const (
 type Card struct {
 	ID                          int
 	Prompt, Dir, Status, Source string
+	Agent                       string `json:",omitempty"`
 	Attempt                     int
 	Pane, Result                string
 	ScheduleID                  int    `json:",omitempty"`
@@ -55,7 +56,7 @@ func (c Card) SourceScheduleID() int {
 	return id
 }
 
-func (c Card) CanChangeProject() bool {
+func (c Card) CanConfigure() bool {
 	return c.Status == Todo && c.manual()
 }
 

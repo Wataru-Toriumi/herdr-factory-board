@@ -70,7 +70,7 @@ type boardUI struct {
 	header, context, hint, notice, detail *tview.TextView
 	input                                 *tview.InputField
 	footer                                *tview.Pages
-	workDir, inputDir                     string
+	workDir, inputDir, inputAgent         string
 	projects                              []string
 	taskProjectNames                      map[string]string
 	editingScheduleID                     int
@@ -176,7 +176,7 @@ func (u *boardUI) activePage() string {
 
 func (u *boardUI) switchView() {
 	u.editingScheduleID = 0
-	u.inputDir = ""
+	u.inputDir, u.inputAgent = "", ""
 	u.detailScheduleID = 0
 	u.detailBody = ""
 	u.detailCard = nil
@@ -258,7 +258,7 @@ func (u *boardUI) showWorkDir() {
 		return
 	}
 	if u.inputDir != "" {
-		u.context.SetText("登録先: " + u.inputDir)
+		u.context.SetText("担当: " + board.AgentLabel(u.inputAgent) + "（Ctrl+G 切替）  登録先: " + u.inputDir)
 	} else if u.tab == agentTab {
 		u.context.SetText("セッション内のエージェント")
 	} else if u.workDir == "" {

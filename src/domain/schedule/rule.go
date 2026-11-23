@@ -11,6 +11,7 @@ import (
 type Rule struct {
 	ID                          int
 	Time, Prompt, Dir, LastDate string
+	Agent                       string    `json:",omitempty"`
 	Interval                    *Interval `json:",omitempty"`
 }
 

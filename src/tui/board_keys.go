@@ -31,7 +31,13 @@ func (u *boardUI) updateDetailTiming() {
 	hint := "↑↓ スクロール   Esc 戻る"
 	if r, ok := u.schedules.byID(u.detailScheduleID); ok {
 		timing = r.Frequency()
+		if u.detailCard == nil {
+			timing += "  担当: " + board.AgentLabel(r.Agent)
+		}
 		hint = "t 定期実行の設定変更   ↑↓ スクロール   Esc 戻る"
+		if u.detailCard == nil {
+			hint = "g 担当を変更   " + hint
+		}
 	}
 	text := fmt.Sprintf("定期実行 #%d  %s\n\n%s", u.detailScheduleID, timing, u.detailBody)
 	if u.detail.GetText(false) != text {
@@ -59,6 +65,7 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "手動タスクの詳細で d から設計。設計案を確認し、a で承認・実装、r でコメントして再設計。実装後はレビュー中のカードで結果を確認し、a で完了。")
 	fmt.Fprintln(&text, "実装レビュー中は r で修正を依頼。承認後は u でレビュー中に戻せます。キャンセル済みの手動タスクは u で未着手に戻せます。")
 	fmt.Fprintln(&text, "一覧の p で表示を絞り込みます。n でタスクごとの作業先を選択。未着手の手動タスクは詳細の p で作業先を変更できます。")
+	fmt.Fprintln(&text, "新規タスク・予定の入力中は Ctrl+G、未着手の手動カード・予定の詳細では g で担当を切り替えます。")
 	fmt.Fprintln(&text, "コマンドはそのまま入力し、Enter で確定。Esc でキャンセル。")
 	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容")
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
@@ -112,8 +119,10 @@ func (u *boardUI) submitInput() {
 	}
 	if u.editingScheduleID == 0 {
 		dir := u.inputDir
+		cmd := command.Parse(value)
+		cmd.Agent = u.inputAgent
 		u.switchView()
-		u.executeAt(value, dir)
+		u.executeAt(cmd, dir)
 		return
 	}
 	if err := scheduler.UpdateTiming(u.store, u.editingScheduleID, value); err != nil {
@@ -129,12 +138,11 @@ func (u *boardUI) composeSchedule(prefix string) {
 }
 
 func (u *boardUI) execute(line string) {
-	u.executeAt(line, "")
+	u.executeAt(command.Parse(line), "")
 }
 
-func (u *boardUI) executeAt(line, dir string) {
+func (u *boardUI) executeAt(cmd command.Command, dir string) {
 	u.notice.SetText("")
-	cmd := command.Parse(line)
 	if dir == "" {
 		run := func(selected string) { u.runCommand(cmd, selected) }
 		switch cmd.Name {
@@ -209,6 +217,13 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	case "input":
 		switch key {
+		case tcell.KeyCtrlG:
+			if u.inputDir != "" {
+				u.inputAgent = nextAgent(u.inputAgent)
+				u.showWorkDir()
+				return nil
+			}
+			return event
 		case tcell.KeyEscape:
 			if u.editingFeedback {
 				u.closeFeedbackEditor()
@@ -226,6 +241,12 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	case "detail":
 		if key == tcell.KeyRune && u.cardKey(event.Rune()) {
+			return nil
+		}
+		if key == tcell.KeyRune && event.Rune() == 'g' && u.detailCard == nil {
+			if r, ok := u.schedules.byID(u.detailScheduleID); ok {
+				u.finishDetailAction(scheduler.ChangeAgent(u.store, r.ID, r.Agent, nextAgent(r.Agent)))
+			}
 			return nil
 		}
 		if key == tcell.KeyRune && event.Rune() == 't' {

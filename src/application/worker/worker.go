@@ -6,11 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -94,7 +92,7 @@ func Run(s store.Store) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go watchCardCancellation(ctx, cancel, s, task)
-	status, result := runCodex(ctx, task, resultPath)
+	status, result := runAgent(ctx, task, resultPath)
 	return s.EditCard(id, func(c *board.Card) error {
 		c.FinishAttempt(task.Attempt, task.Phase, status, result)
 		return nil
@@ -121,46 +119,6 @@ func watchCardCancellation(ctx context.Context, cancel context.CancelFunc, s sto
 			}
 		}
 	}
-}
-
-func runCodex(ctx context.Context, task board.Card, resultPath string) (status, result string) {
-	args := []string{"exec", "--output-last-message", resultPath}
-	if task.Phase == board.DesignPhase {
-		args = append(args, "--sandbox", "read-only")
-	}
-	cmd := exec.CommandContext(ctx, "codex", append(args, "-")...)
-	// Codex が起動したコマンドも一緒に止められるよう、専用のプロセスグループで実行する。
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error {
-		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		if errors.Is(err, syscall.ESRCH) {
-			return os.ErrProcessDone
-		}
-		return err
-	}
-	cmd.Dir = task.Dir
-	cmd.Stdin = strings.NewReader(workerPrompt(task))
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	runErr := cmd.Run()
-	msg, readErr := os.ReadFile(resultPath)
-	result = strings.TrimSpace(string(msg))
-	if ctx.Err() != nil {
-		return board.Canceled, result
-	}
-	var exitErr *exec.ExitError
-	if errors.As(runErr, &exitErr) && (exitErr.ExitCode() == 130 || exitErr.Sys().(syscall.WaitStatus).Signal() == syscall.SIGINT) {
-		return board.Canceled, result
-	}
-	if runErr != nil {
-		return board.Failed, strings.TrimSpace(result + "\n" + runErr.Error())
-	}
-	if readErr != nil || result == "" {
-		if task.Phase == board.DesignPhase {
-			return board.Failed, "設計案を取得できませんでした"
-		}
-		return board.Done, "終了コード 0（最終メッセージなし）"
-	}
-	return board.Done, result
 }
 
 // ワーカーは実行中、カードごとのロックを保持する。

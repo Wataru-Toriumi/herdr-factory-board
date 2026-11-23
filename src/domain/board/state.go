@@ -38,7 +38,8 @@ func (b *State) RecordDueSchedules(now time.Time) {
 		r := &b.Schedules[i]
 		if r.Due(now) {
 			source := r.RecordOccurrence(now)
-			b.NewCard(r.Prompt, r.Dir, source).ScheduleID = r.ID
+			card := b.NewCard(r.Prompt, r.Dir, source)
+			card.ScheduleID, card.Agent = r.ID, r.Agent
 		}
 	}
 }

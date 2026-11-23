@@ -15,6 +15,7 @@ import (
 
 type Command struct {
 	Name, Arg string
+	Agent     string
 }
 
 func Parse(line string) Command {
@@ -37,11 +38,11 @@ func (cmd Command) Run(s store.Store, herdr, dir string) (*board.Card, error) {
 			if dir == "" {
 				return errors.New("先に dir で作業先を指定してください")
 			}
-			b.NewCard(arg, dir, "")
+			b.NewCard(arg, dir, "").Agent = cmd.Agent
 			return nil
 		})
 	case schedule.Daily, schedule.Every:
-		return nil, scheduler.Register(s, herdr, dir, cmd.Name, arg)
+		return nil, scheduler.Register(s, herdr, dir, cmd.Name, arg, cmd.Agent)
 	case "scheduler":
 		return nil, scheduler.EnsureRunning(s, herdr)
 	case "start", "open", "result", "recover", "remove":
