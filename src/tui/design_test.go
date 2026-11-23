@@ -240,8 +240,7 @@ func TestDesignFailureRequiresNewDesignBeforeApproval(t *testing.T) {
 
 func TestIncompleteDesignHasNoReviewShortcuts(t *testing.T) {
 	u := newBoardUI(store.Store{Dir: t.TempDir()}, "true")
-	u.read("カードの詳細", "", 0)
-	u.renderCardDetail(board.Card{ID: 1, Status: board.AwaitingDesignReview, Phase: board.DesignPhase})
+	u.openCardDetail(board.Card{ID: 1, Status: board.AwaitingDesignReview, Phase: board.DesignPhase})
 	if hint := u.hint.GetText(false); strings.Contains(hint, "承認して実装") || strings.Contains(hint, "再設計") {
 		t.Fatalf("設計案が空なのにレビュー操作が表示されました: %s", hint)
 	}
