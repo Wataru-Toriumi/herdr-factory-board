@@ -28,6 +28,9 @@ func TestChangesToRemovedScheduleLeaveOtherSchedulesAlone(t *testing.T) {
 	if err := UpdateTiming(s, 5, "12:00"); err == nil || err.Error() != want {
 		t.Fatalf("解除済みの予定の変更: %v", err)
 	}
+	if err := ChangeAgent(s, 5, "", board.Claude); err == nil || err.Error() != want {
+		t.Fatalf("解除済みの予定の担当変更: %v", err)
+	}
 	if err := Remove(s, 5); err == nil || err.Error() != want {
 		t.Fatalf("解除済みの予定の再削除: %v", err)
 	}
@@ -37,6 +40,29 @@ func TestChangesToRemovedScheduleLeaveOtherSchedulesAlone(t *testing.T) {
 	}
 	if len(b.Schedules) != 1 || b.Schedules[0] != remaining {
 		t.Fatalf("別の予定が変更されました: %+v", b.Schedules)
+	}
+}
+
+func TestChangeAgentRejectsStaleSelection(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.Schedules = []schedule.Rule{{ID: 5, Time: "09:00"}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ChangeAgent(s, 5, "", board.Claude); err != nil {
+		t.Fatal(err)
+	}
+	if err := ChangeAgent(s, 5, "", board.Codex); err == nil || err.Error() != "予定の担当が更新されました。最新の状態を確認してください" {
+		t.Fatalf("古い担当での変更: %v", err)
+	}
+	b, err := s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := b.Schedules[0].Agent; got != board.Claude {
+		t.Fatalf("保存された担当 = %q", got)
 	}
 }
 
