@@ -1,5 +1,7 @@
 package board
 
+import "errors"
+
 // QueueAttempt は開始条件の確認後に呼び、ワーカーへ渡す実行番号を返す。
 func (c *Card) QueueAttempt() int {
 	if c.Status == Todo && c.ReopenCount > 0 {
@@ -31,6 +33,15 @@ func (c *Card) FailAttemptLaunch(attempt int, message string) {
 
 func (c Card) IsRunningAttempt(attempt int) bool {
 	return c.Attempt == attempt && c.Status == Running
+}
+
+// RecoverInterruptedAttempt はワーカーの停止を確認した後に呼び、中断した実行を失敗として記録する。
+func (c *Card) RecoverInterruptedAttempt() error {
+	if c.Status != Starting && c.Status != Running {
+		return errors.New("中断した実行だけを復旧できます")
+	}
+	c.Status, c.Result = Failed, "中断した実行を手動で復旧しました"
+	return nil
 }
 
 // FinishAttempt は実行開始時のフェーズに従って結果を記録する。
