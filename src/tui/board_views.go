@@ -49,6 +49,7 @@ func (u *boardUI) renderTasks(cards []board.Card) {
 		}
 	}
 	selected, _ := u.selectedCard()
+	selectedLane := u.lane
 	for i, group := range groups {
 		list := u.lists[i]
 		if labelsChanged || !reflect.DeepEqual(u.cards[i], group) {
@@ -58,13 +59,7 @@ func (u *boardUI) renderTasks(cards []board.Card) {
 				list.AddItem(tview.Escape(c.Prompt), tview.Escape(cardListLabel(c, i, names[c.Dir])), 0, nil)
 				if selected.ID == c.ID {
 					index = j
-					if u.lane != i {
-						u.lane = i
-						u.layoutColumns()
-						if u.activePage() == "tasks" {
-							u.app.SetFocus(list)
-						}
-					}
+					selectedLane = i
 				}
 			}
 			if len(group) > 0 {
@@ -74,10 +69,18 @@ func (u *boardUI) renderTasks(cards []board.Card) {
 		}
 		list.SetTitle(fmt.Sprintf(" %s %d ", laneNames[i], len(group)))
 	}
-	u.highlightLane()
+	u.selectLane(selectedLane)
 }
 
-func (u *boardUI) highlightLane() {
+func (u *boardUI) selectLane(lane int) {
+	if u.lane != lane {
+		u.lane = lane
+		u.layoutColumns()
+		// 入力欄や詳細画面を操作中でも、戻ったときに表示する列は更新する。
+		if u.activePage() == "tasks" {
+			u.app.SetFocus(u.lists[lane])
+		}
+	}
 	for i, list := range u.lists {
 		border := tcell.ColorDarkSlateGray
 		if i == u.lane {
