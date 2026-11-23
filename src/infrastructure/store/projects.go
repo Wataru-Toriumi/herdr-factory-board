@@ -28,3 +28,14 @@ func (s Store) RegisterProject(path string) error {
 		return nil
 	})
 }
+
+// ChangeCardProject は作業先の選択中にカードが更新されていないか、ロック内で照合する。
+func (s Store) ChangeCardProject(seen board.Card, dir string) error {
+	return s.EditCard(seen.ID, func(c *board.Card) error {
+		if !c.CanChangeProject() || *c != seen {
+			return errors.New("チケットが更新されました。最新の作業先と状態を確認してください")
+		}
+		c.Dir = dir
+		return nil
+	})
+}

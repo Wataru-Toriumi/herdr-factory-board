@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"path/filepath"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
@@ -56,13 +55,7 @@ func (u *boardUI) pickProject(current string, filter bool, selected func(string)
 
 func (u *boardUI) pickCardProject(seen board.Card) {
 	u.pickProject(seen.Dir, false, func(dir string) {
-		err := u.store.EditCard(seen.ID, func(c *board.Card) error {
-			if !c.CanChangeProject() || *c != seen {
-				return errors.New("チケットが更新されました。最新の作業先と状態を確認してください")
-			}
-			c.Dir = dir
-			return nil
-		})
+		err := u.store.ChangeCardProject(seen, dir)
 		u.refresh()
 		if err != nil {
 			u.notice.SetText(err.Error())
