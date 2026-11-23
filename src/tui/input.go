@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -90,12 +91,16 @@ func (u *boardUI) closeFeedbackEditor() {
 }
 
 func (u *boardUI) editScheduleTiming(r schedule.Rule) {
-	value, label := r.Time, "時刻（HH:MM）"
+	label := "時刻（HH:MM）"
 	if r.TimingKind() == schedule.Every {
-		value, label = fmt.Sprintf("%dm", r.Interval.Minutes), "間隔（例 15m）"
+		label = "間隔（例 15m）"
 	}
-	u.openInput(fmt.Sprintf("#%d %s > ", r.ID, label), value, func(value string) {
-		if err := scheduler.UpdateTiming(u.store, r.ID, value); err != nil {
+	u.openInput(fmt.Sprintf("#%d %s > ", r.ID, label), r.TimingValue(), func(value string) {
+		if err := scheduler.ChangeTiming(u.store, r, value); err != nil {
+			var conflict *scheduler.TimingConflict
+			if errors.As(err, &conflict) {
+				u.editScheduleTiming(conflict.Current)
+			}
 			u.notice.SetText(err.Error())
 			return
 		}

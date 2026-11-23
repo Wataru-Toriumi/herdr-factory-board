@@ -33,8 +33,28 @@ func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 }
 
 func UpdateTiming(s store.Store, id int, value string) error {
+	return updateTiming(s, id, value, nil)
+}
+
+// TimingConflict は編集開始後に他のペインが保存した設定を返す。
+type TimingConflict struct {
+	Current schedule.Rule
+}
+
+func (e *TimingConflict) Error() string {
+	return "別のペインで予定が変更されました。現在の設定は " + e.Current.Frequency() + " です。"
+}
+
+func ChangeTiming(s store.Store, seen schedule.Rule, value string) error {
+	return updateTiming(s, seen.ID, value, &seen)
+}
+
+func updateTiming(s store.Store, id int, value string, seen *schedule.Rule) error {
 	return editSchedule(s, id, func(b *board.State, i int) error {
 		r := &b.Schedules[i]
+		if seen != nil && (r.TimingKind() != seen.TimingKind() || r.TimingValue() != seen.TimingValue()) {
+			return &TimingConflict{Current: *r}
+		}
 		return r.SetTiming(r.TimingKind(), strings.TrimSpace(value), time.Now())
 	})
 }
