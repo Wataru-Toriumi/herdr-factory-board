@@ -362,6 +362,31 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	}
 }
 
+func TestDetailKeysWithoutSchedule(t *testing.T) {
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	for _, tc := range []struct {
+		name            string
+		card            *board.Card
+		consumeAgentKey bool
+	}{
+		{"解除済みの予定", nil, true},
+		{"解除済みの予定から作成したカード", &board.Card{Status: board.Running}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u.openDetail(tc.name, "", 1, tc.card)
+			if hint := u.hint.GetText(false); strings.Contains(hint, "g 担当を変更") || strings.Contains(hint, "t 定期実行の設定変更") {
+				t.Fatalf("解除後の操作案内 = %q", hint)
+			}
+			for key, consume := range map[rune]bool{'g': tc.consumeAgentKey, 't': true, 'j': false} {
+				event := tcell.NewEventKey(tcell.KeyRune, key, 0)
+				if got := u.key(event); (consume && got != nil) || (!consume && got != event) {
+					t.Errorf("キー %q の受け渡しが違います", key)
+				}
+			}
+		})
+	}
+}
+
 func TestDetailRefreshShowsUpdatedCardAndSchedule(t *testing.T) {
 	s := store.Store{Dir: t.TempDir()}
 	if err := s.Edit(func(b *board.State) error {
