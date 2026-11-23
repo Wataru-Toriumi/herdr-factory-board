@@ -138,8 +138,9 @@ func Focus(s store.Store, bin string, id int) error {
 	if err != nil {
 		return err
 	}
-	if c.Status != board.Running || c.Pane == "" {
+	pane := c.RunningPane()
+	if pane == "" {
 		return errors.New("実行中の担当ペインがありません。結果は result で確認できます")
 	}
-	return herdr.FocusPane(bin, c.Pane)
+	return herdr.FocusPane(bin, pane)
 }
