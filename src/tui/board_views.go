@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -120,63 +119,4 @@ func (u *boardUI) renderAgents(rows []agentRow) {
 		u.agents.SetTitle(" エージェントなし ")
 	}
 	u.updateHeader()
-}
-
-type scheduleList struct {
-	*tview.List
-	all   []schedule.Rule
-	rules []schedule.Rule
-}
-
-func (l *scheduleList) byID(id int) (schedule.Rule, bool) {
-	i := schedule.IndexByID(l.all, id)
-	if i < 0 {
-		return schedule.Rule{}, false
-	}
-	return l.all[i], true
-}
-
-func (l *scheduleList) selected() (schedule.Rule, bool) {
-	i := l.GetCurrentItem()
-	if i < 0 || i >= len(l.rules) {
-		return schedule.Rule{}, false
-	}
-	return l.rules[i], true
-}
-
-func (l *scheduleList) render(all []schedule.Rule, dir string, active bool, err error) {
-	l.all = all
-	rules := all
-	if dir != "" {
-		rules = nil
-		for _, r := range all {
-			if r.Dir == dir {
-				rules = append(rules, r)
-			}
-		}
-	}
-	state := "停止中"
-	if err != nil {
-		state = "状態不明"
-	} else if active {
-		state = "稼働中"
-	}
-	l.SetTitle(fmt.Sprintf(" 定期実行 %d件 · %s ", len(rules), state))
-	if reflect.DeepEqual(l.rules, rules) {
-		return
-	}
-
-	selected, _ := l.selected()
-	index := l.GetCurrentItem()
-	l.Clear()
-	for i, r := range rules {
-		l.AddItem(tview.Escape(fmt.Sprintf("%s  %s", r.Frequency(), r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
-		if r.ID == selected.ID {
-			index = i
-		}
-	}
-	if len(rules) > 0 {
-		l.SetCurrentItem(min(max(0, index), len(rules)-1))
-	}
-	l.rules = rules
 }
