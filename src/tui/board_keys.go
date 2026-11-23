@@ -86,7 +86,7 @@ func (u *boardUI) activate() {
 		return
 	case agentTab:
 		if row, ok := u.agents.selected(); ok {
-			if err := row.focus(u.store, u.herdr); err != nil {
+			if err := u.focusAgent(row); err != nil {
 				u.notice.SetText(err.Error())
 			}
 		}

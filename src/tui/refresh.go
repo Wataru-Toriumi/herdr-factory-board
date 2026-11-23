@@ -9,6 +9,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
 )
 
 type boardSnapshot struct {
@@ -111,6 +112,6 @@ func (u *boardUI) renderBoard(snapshot boardSnapshot) {
 		u.notice.SetText(u.board.schedulerErr.Error())
 	}
 	u.showWorkDir()
-	u.agents.render(boardAgents(u.panes, u.spaces, b.Cards))
+	u.agents.render(agentlist.Build(u.panes, u.spaces, b.Cards))
 	u.updateHeader()
 }
