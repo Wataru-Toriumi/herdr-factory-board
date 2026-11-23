@@ -34,6 +34,10 @@ func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card
 		if err := prepare(c); err != nil {
 			return err
 		}
+		if c.Status == board.Todo && c.ReopenCount > 0 {
+			// 再オープン前の記録は、新しい作業を開始するまで詳細画面に残す。
+			c.Design, c.Feedback, c.ImplementationFeedback, c.PreviousResult = "", "", "", ""
+		}
 		c.Attempt++
 		attempt = c.Attempt
 		c.Status, c.Pane, c.Result = board.Starting, "", ""
@@ -57,7 +61,7 @@ func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card
 
 func Cancel(s store.Store, seen board.Card) error {
 	return s.EditCard(seen.ID, func(c *board.Card) error {
-		if c.Attempt != seen.Attempt || c.Status != seen.Status || !c.CanCancel() {
+		if *c != seen || !c.CanCancel() {
 			return errors.New("カードが更新されました。最新の状態を確認してください")
 		}
 		c.Status = board.Canceled

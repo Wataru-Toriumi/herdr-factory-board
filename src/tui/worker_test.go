@@ -60,4 +60,33 @@ func TestCancelRunningWorker(t *testing.T) {
 	if err != nil || cardLane(b.Cards[0]) != failedOrCanceledLane || u.detailCard.Status != board.Canceled {
 		t.Fatalf("キャンセル後のカード: %+v, %v", b, err)
 	}
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'u', 0))
+	if c := u.detailCard; c.Status != board.Todo || u.lane != todoLane || c.Dir != s.Dir || c.ID != 1 || c.Pane != "" {
+		t.Fatalf("再オープン後のカード: %+v", c)
+	}
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
+	if c := u.detailCard; c.Status != board.Starting || c.Attempt != 1 || c.Phase != board.DesignPhase {
+		t.Fatalf("再オープン後に設計を開始できません: %+v", c)
+	}
+}
+
+func TestReopenAvailability(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	for _, card := range []board.Card{
+		{Status: board.Done},
+		{Status: board.Canceled, Source: "定期 #3"},
+		{Status: board.Canceled, ScheduleID: 3},
+		{Status: board.Running, Phase: board.ImplementationPhase},
+	} {
+		card.ID = 1
+		if err := s.Edit(func(b *board.State) error { b.Cards = []board.Card{card}; return nil }); err != nil {
+			t.Fatal(err)
+		}
+		u := newBoardUI(s, "true")
+		u.execute("result 1")
+		event := tcell.NewEventKey(tcell.KeyRune, 'u', 0)
+		if u.key(event) != event || worker.Reopen(s, card) == nil {
+			t.Fatalf("対象外のカードを再オープンできました: %+v", card)
+		}
+	}
 }

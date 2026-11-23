@@ -57,7 +57,7 @@ func (u *boardUI) pickProject(current string, filter bool, selected func(string)
 func (u *boardUI) pickCardProject(seen board.Card) {
 	u.pickProject(seen.Dir, false, func(dir string) {
 		err := u.store.EditCard(seen.ID, func(c *board.Card) error {
-			if !c.CanChangeProject() || c.Dir != seen.Dir {
+			if !c.CanChangeProject() || *c != seen {
 				return errors.New("チケットが更新されました。最新の作業先と状態を確認してください")
 			}
 			c.Dir = dir

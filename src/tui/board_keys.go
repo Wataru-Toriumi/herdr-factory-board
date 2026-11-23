@@ -65,6 +65,7 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "タスクを選んで v で詳細を表示。Enter で開始・担当ペインへ移動・結果表示。")
 	fmt.Fprintln(&text, "カードの詳細で x を押すと、そのタスクをキャンセルします。定期実行の次回以降の予定は継続します。")
 	fmt.Fprintln(&text, "手動タスクの詳細で d から設計。設計案を確認し、a で承認・実装、r でコメントして再設計。実装後はレビュー中のカードで結果を確認し、a で完了。")
+	fmt.Fprintln(&text, "実装レビュー中は r で修正を依頼。承認後は u でレビュー中に戻せます。キャンセル済みの手動タスクは u で未着手に戻せます。")
 	fmt.Fprintln(&text, "一覧の p で表示を絞り込みます。n でタスクごとの作業先を選択。未着手の手動タスクは詳細の p で作業先を変更できます。")
 	fmt.Fprintln(&text, "コマンドはそのまま入力し、Enter で確定。Esc でキャンセル。")
 	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容")
@@ -110,11 +111,11 @@ func (u *boardUI) submitInput() {
 	value := u.input.GetText()
 	if u.editingFeedback {
 		if strings.TrimSpace(value) == "" {
-			u.notice.SetText("再設計のコメントを入力してください")
+			u.notice.SetText("修正内容を入力してください")
 			return
 		}
 		u.closeFeedbackEditor()
-		u.launchDetailPhase(board.DesignPhase, value)
+		u.launchDetailPhase(u.detailCard.Phase, value)
 		return
 	}
 	if u.editingScheduleID == 0 {

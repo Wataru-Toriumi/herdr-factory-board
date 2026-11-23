@@ -150,6 +150,43 @@ printf '%s' "$ANSWER" > "$result"
 	if c := u.detailCard; c.Status != board.Done || c.Attempt != 3 || c.Design != "設計案B" || c.Result != "実装とテストが完了" || c.Phase != board.ImplementationPhase {
 		t.Fatalf("実装結果: %+v", c)
 	}
+
+	key('u')
+	if c := u.detailCard; u.lane != reviewLane || c.Result != review.Result || c.Attempt != review.Attempt {
+		t.Fatalf("承認取り消し後: %+v", c)
+	}
+	if err := worker.ApproveResult(s, review); err == nil {
+		t.Fatal("取り消し前の画面から再承認できました")
+	}
+	key('r')
+	press(tcell.KeyEnter)
+	if u.activePage() != "input" {
+		t.Fatal("空の実装修正依頼が送信されました")
+	}
+	press(tcell.KeyEscape)
+	if u.activePage() != "detail" || !u.detailCard.CanReviewResult() {
+		t.Fatal("修正依頼の取り消し後にレビューを続けられません")
+	}
+	key('r')
+	u.input.SetText("結果が空の場合も検証して")
+	press(tcell.KeyEnter)
+	if u.lane != workLane || u.detailCard.Status != board.Starting {
+		t.Fatalf("実装差し戻し後: %+v", u.detailCard)
+	}
+	prompt = run(4, "implementation", "空の検索結果も検証済み")
+	for _, part := range []string{"検索を追加", "設計案B", review.Result, "結果が空の場合も検証して"} {
+		if !strings.Contains(prompt, part) {
+			t.Fatalf("差し戻し後のプロンプトに %q がありません: %s", part, prompt)
+		}
+	}
+	u.refresh()
+	if u.lane != reviewLane || u.detailCard.Result != "空の検索結果も検証済み" {
+		t.Fatalf("修正後のレビュー: %+v", u.detailCard)
+	}
+	key('a')
+	if u.lane != doneLane {
+		t.Fatal("修正後の結果を承認できません")
+	}
 }
 
 func TestDesignFailureRequiresNewDesignBeforeApproval(t *testing.T) {
@@ -213,5 +250,35 @@ func TestIncompleteDesignHasNoReviewShortcuts(t *testing.T) {
 		if u.key(event) != event {
 			t.Fatalf("設計案が空なのに %q を受け付けました", key)
 		}
+	}
+}
+
+func TestReopenedCardCanStartFresh(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	err := s.Edit(func(b *board.State) error {
+		c := b.NewCard("手動", s.Dir, "")
+		c.Status, c.Phase, c.Attempt = board.Canceled, board.ImplementationPhase, 3
+		c.Design, c.Feedback, c.ImplementationFeedback = "以前の設計", "設計の指摘", "実装の指摘"
+		c.PreviousResult, c.Result = "以前の結果", "中断時の結果"
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.execute("result 1")
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'u', 0))
+	if c := u.detailCard; c.Phase != "" || c.Result != "中断時の結果" || c.Design != "以前の設計" {
+		t.Fatalf("未着手に戻した直後の記録: %+v", c)
+	}
+	u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
+	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	b, err := s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := b.Cards[0]
+	if c.Status != board.Starting || c.Attempt != 4 || c.Phase != "" || c.Design != "" || c.Feedback != "" || c.ImplementationFeedback != "" || c.PreviousResult != "" || c.Result != "" {
+		t.Fatalf("直接実行の開始時に以前の状態が残りました: %+v", c)
 	}
 }

@@ -25,6 +25,9 @@ type Card struct {
 	Phase                       string `json:",omitempty"`
 	Design                      string `json:",omitempty"`
 	Feedback                    string `json:",omitempty"`
+	ImplementationFeedback      string `json:",omitempty"`
+	PreviousResult              string `json:",omitempty"`
+	ReopenCount                 int    `json:",omitempty"`
 }
 
 func (c Card) CanCancel() bool {
@@ -53,7 +56,17 @@ func (c Card) SourceScheduleID() int {
 }
 
 func (c Card) CanChangeProject() bool {
-	return c.Status == Todo && c.ScheduleID == 0 && c.Source == ""
+	return c.Status == Todo && c.manual()
+}
+
+func (c Card) manual() bool { return c.Source == "" && c.ScheduleID == 0 }
+
+func (c Card) CanReviewResult() bool {
+	return c.manual() && c.Phase == ImplementationPhase && c.Status == AwaitingResultReview
+}
+
+func (c Card) CanReopen() bool {
+	return c.manual() && (c.Status == Canceled || (c.Status == Done && c.Phase == ImplementationPhase))
 }
 
 const (
@@ -62,11 +75,11 @@ const (
 )
 
 func (c Card) CanStartDesign() bool {
-	return c.Source == "" && c.ScheduleID == 0 && (c.Status == Todo || (c.Status == Failed && c.Phase == DesignPhase))
+	return c.manual() && (c.Status == Todo || (c.Status == Failed && c.Phase == DesignPhase))
 }
 
 func (c Card) CanReviewDesign() bool {
-	return c.Source == "" && c.ScheduleID == 0 && c.Status == AwaitingDesignReview && c.Phase == DesignPhase && c.Design != ""
+	return c.manual() && c.Status == AwaitingDesignReview && c.Phase == DesignPhase && c.Design != ""
 }
 
 func (c Card) PhaseLabel() string {
