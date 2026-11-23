@@ -114,25 +114,15 @@ func RunDue(s store.Store, herdrBin string, now time.Time) error {
 	}
 	// 実行時刻を迎えた予定があるときだけ書き込む。
 	// 読み込み後に予定が変更されることがあるため、ロックを取得してから再確認する。
-	for _, rule := range b.Schedules {
-		if !rule.Due(now) {
-			continue
-		}
+	if b.HasDueSchedule(now) {
 		err = s.Edit(func(current *board.State) error {
-			for i := range current.Schedules {
-				r := &current.Schedules[i]
-				if r.Due(now) {
-					source := r.RecordOccurrence(now)
-					current.NewCard(r.Prompt, r.Dir, source).ScheduleID = r.ID
-				}
-			}
+			current.RecordDueSchedules(now)
 			b = *current
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		break
 	}
 	// 前回の停止直前に保存した未実行の定期カードも起動する。
 	for _, c := range b.Cards {

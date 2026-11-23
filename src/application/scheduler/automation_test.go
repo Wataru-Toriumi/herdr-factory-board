@@ -12,6 +12,51 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
+func TestRunDueResumesPendingCardAndRecordsSimultaneousSchedules(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	now := time.Date(2026, 11, 23, 9, 0, 0, 0, time.Local)
+	err := s.Edit(func(b *board.State) error {
+		b.Schedules = []schedule.Rule{
+			{ID: 1, Dir: s.Dir, Time: "09:00"},
+			{ID: 2, Dir: s.Dir, Time: "10:00"},
+			{ID: 3, Dir: s.Dir, Interval: &schedule.Interval{Minutes: 15, NextRun: now}},
+		}
+		b.NextID = 3
+		b.NewCard("保存済み", s.Dir, "定期 #1 2026-11-22 09:00").ScheduleID = 1
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := RunDue(s, "true", now.Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	b, err := s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Cards) != 1 || b.Cards[0].Status != board.Starting {
+		t.Fatalf("予定時刻前の未起動カードの再開: %+v", b.Cards)
+	}
+	for i := 0; i < 2; i++ {
+		if err := RunDue(s, "true", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b, err = s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Cards) != 3 || b.Cards[1].ScheduleID != 1 || b.Cards[2].ScheduleID != 3 {
+		t.Fatalf("同時刻の予定から作成したカード: %+v", b.Cards)
+	}
+	for _, c := range b.Cards {
+		if c.Status != board.Starting || c.Attempt != 1 {
+			t.Fatalf("カードの起動状態: %+v", c)
+		}
+	}
+}
+
 func TestDailyOccurrenceAndRetry(t *testing.T) {
 	s := store.Store{Dir: t.TempDir()}
 	err := s.Edit(func(b *board.State) error {
