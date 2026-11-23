@@ -19,6 +19,12 @@ func (u *boardUI) renderCardDetail(c board.Card) {
 	if c.Feedback != "" {
 		body += "\n\nレビューコメント\n" + c.Feedback
 	}
+	if c.ImplementationFeedback != "" {
+		if c.PreviousResult != "" {
+			body += "\n\n前回の実装結果\n" + c.PreviousResult
+		}
+		body += "\n\n実装の修正依頼\n" + c.ImplementationFeedback
+	}
 	if c.Phase != "" && c.Result != "" {
 		body += "\n\n実行結果\n" + c.Result
 	} else {
@@ -53,8 +59,17 @@ func (u *boardUI) designShortcuts() []designShortcut {
 		return []designShortcut{
 			{'d', "設計から開始", func() { u.launchDetailPhase(board.DesignPhase, "") }},
 		}
-	case c.Status == board.AwaitingResultReview:
-		return []designShortcut{{'a', "結果を承認して完了", u.approveDetailResult}}
+	case c.CanReviewResult():
+		return []designShortcut{
+			{'a', "結果を承認して完了", u.approveDetailResult},
+			{'r', "修正を依頼", u.editFeedback},
+		}
+	case c.CanReopen():
+		label := "未着手に戻す"
+		if c.Status == board.Done {
+			label = "承認を取り消す"
+		}
+		return []designShortcut{{'u', label, u.reopenDetail}}
 	case c.CanReviewDesign():
 		return []designShortcut{
 			{'a', "承認して実装", func() { u.launchDetailPhase(board.ImplementationPhase, "") }},
@@ -75,17 +90,20 @@ func (u *boardUI) designKey(key rune) bool {
 }
 
 func (u *boardUI) approveDetailResult() {
-	u.notice.SetText("")
-	err := worker.ApproveResult(u.store, *u.detailCard)
-	u.refresh()
-	if err != nil {
-		u.notice.SetText(err.Error())
-	}
+	u.finishDetailAction(worker.ApproveResult(u.store, *u.detailCard))
+}
+
+func (u *boardUI) reopenDetail() {
+	u.finishDetailAction(worker.Reopen(u.store, *u.detailCard))
 }
 
 func (u *boardUI) editFeedback() {
 	u.edit("")
-	u.input.SetLabel("再設計のコメント > ")
+	if u.detailCard.CanReviewResult() {
+		u.input.SetLabel("実装の修正内容 > ")
+	} else {
+		u.input.SetLabel("再設計のコメント > ")
+	}
 	u.editingFeedback = true
 }
 
@@ -97,8 +115,11 @@ func (u *boardUI) closeFeedbackEditor() {
 }
 
 func (u *boardUI) launchDetailPhase(phase, feedback string) {
+	u.finishDetailAction(worker.StartPhase(u.store, u.herdr, *u.detailCard, phase, feedback))
+}
+
+func (u *boardUI) finishDetailAction(err error) {
 	u.notice.SetText("")
-	err := worker.StartPhase(u.store, u.herdr, *u.detailCard, phase, feedback)
 	u.refresh()
 	if err != nil {
 		u.notice.SetText(err.Error())
