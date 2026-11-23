@@ -28,9 +28,10 @@ func (b *State) NewCard(prompt, dir, source string) *Card {
 }
 
 // AddSchedule はカードと共通の通し番号を付けて予定を登録する。
-func (b *State) AddSchedule(rule schedule.Rule) {
+func (b *State) AddSchedule(rule schedule.Rule) int {
 	rule.ID = b.allocateID()
 	b.Schedules = append(b.Schedules, rule)
+	return rule.ID
 }
 
 func (b State) HasDueSchedule(now time.Time) bool {

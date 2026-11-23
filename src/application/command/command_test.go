@@ -1,6 +1,7 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
@@ -26,8 +27,12 @@ func TestDailyCommandSavesBeforeSchedulerLaunch(t *testing.T) {
 	if _, err := Parse("dir "+s.Dir).Run(s, "false", s.Dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Parse("daily 09:00 朝のタスク").Run(s, "false", s.Dir); err == nil {
-		t.Fatal("スケジューラーの起動エラーが返りませんでした")
+	_, err := Parse("daily 09:00 朝のタスク").Run(s, "false", s.Dir)
+	if err == nil || !strings.Contains(err.Error(), "予定 #1 は保存済み") || !strings.Contains(err.Error(), "scheduler で起動を再試行") {
+		t.Fatalf("登録済みの予定と起動の再試行方法: %v", err)
+	}
+	if _, err := Parse("scheduler").Run(s, "true", s.Dir); err != nil {
+		t.Fatal(err)
 	}
 	b, err := s.Read()
 	if err != nil {

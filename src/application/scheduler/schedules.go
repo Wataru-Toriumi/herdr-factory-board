@@ -17,6 +17,7 @@ func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 	if rule.Prompt == "" {
 		return errors.New("作業内容を入力してください")
 	}
+	var id int
 	if err := s.Edit(func(b *board.State) error {
 		if dir == "" {
 			return errors.New("先に dir で作業先を指定してください")
@@ -24,12 +25,15 @@ func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 		if err := rule.SetTiming(kind, when, time.Now()); err != nil {
 			return err
 		}
-		b.AddSchedule(rule)
+		id = b.AddSchedule(rule)
 		return nil
 	}); err != nil {
 		return err
 	}
-	return EnsureRunning(s, herdrBin)
+	if err := EnsureRunning(s, herdrBin); err != nil {
+		return fmt.Errorf("予定 #%d は保存済みです。scheduler で起動を再試行してください（%w）", id, err)
+	}
+	return nil
 }
 
 func UpdateTiming(s store.Store, id int, value string) error {
