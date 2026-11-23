@@ -129,12 +129,11 @@ type scheduleList struct {
 }
 
 func (l *scheduleList) byID(id int) (schedule.Rule, bool) {
-	for _, r := range l.all {
-		if r.ID == id {
-			return r, true
-		}
+	i := schedule.IndexByID(l.all, id)
+	if i < 0 {
+		return schedule.Rule{}, false
 	}
-	return schedule.Rule{}, false
+	return l.all[i], true
 }
 
 func (l *scheduleList) selected() (schedule.Rule, bool) {

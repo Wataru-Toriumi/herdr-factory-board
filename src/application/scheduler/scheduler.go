@@ -72,29 +72,27 @@ func Register(s store.Store, herdrBin, dir, kind, arg string) error {
 
 func UpdateTiming(s store.Store, id int, value string) error {
 	return s.Edit(func(b *board.State) error {
-		for i := range b.Schedules {
-			r := &b.Schedules[i]
-			if r.ID == id {
-				kind := "daily"
-				if r.Interval != nil {
-					kind = "every"
-				}
-				return r.SetTiming(kind, strings.TrimSpace(value), time.Now())
-			}
+		i := schedule.IndexByID(b.Schedules, id)
+		if i < 0 {
+			return fmt.Errorf("定期実行 #%d がありません", id)
 		}
-		return fmt.Errorf("定期実行 #%d がありません", id)
+		r := &b.Schedules[i]
+		kind := "daily"
+		if r.Interval != nil {
+			kind = "every"
+		}
+		return r.SetTiming(kind, strings.TrimSpace(value), time.Now())
 	})
 }
 
 func Remove(s store.Store, id int) error {
 	return s.Edit(func(b *board.State) error {
-		for i, r := range b.Schedules {
-			if r.ID == id {
-				b.Schedules = append(b.Schedules[:i], b.Schedules[i+1:]...)
-				return nil
-			}
+		i := schedule.IndexByID(b.Schedules, id)
+		if i < 0 {
+			return fmt.Errorf("定期実行 #%d がありません", id)
 		}
-		return fmt.Errorf("定期実行 #%d がありません", id)
+		b.Schedules = append(b.Schedules[:i], b.Schedules[i+1:]...)
+		return nil
 	})
 }
 

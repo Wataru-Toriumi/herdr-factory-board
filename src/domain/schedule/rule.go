@@ -14,6 +14,16 @@ type Rule struct {
 	Interval                    *Interval `json:",omitempty"`
 }
 
+// IndexByID は指定した予定番号の位置を返す。見つからなければ -1 を返す。
+func IndexByID(rules []Rule, id int) int {
+	for i := range rules {
+		if rules[i].ID == id {
+			return i
+		}
+	}
+	return -1
+}
+
 // Interval は分単位の実行間隔と次の予定時刻を保持する。
 type Interval struct {
 	Minutes int64

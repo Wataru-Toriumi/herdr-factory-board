@@ -12,6 +12,34 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
+func TestChangesToRemovedScheduleLeaveOtherSchedulesAlone(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	remaining := schedule.Rule{ID: 8, Time: "10:00"}
+	if err := s.Edit(func(b *board.State) error {
+		b.Schedules = []schedule.Rule{{ID: 5, Time: "09:00"}, remaining}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Remove(s, 5); err != nil {
+		t.Fatal(err)
+	}
+	const want = "定期実行 #5 がありません"
+	if err := UpdateTiming(s, 5, "12:00"); err == nil || err.Error() != want {
+		t.Fatalf("解除済みの予定の変更: %v", err)
+	}
+	if err := Remove(s, 5); err == nil || err.Error() != want {
+		t.Fatalf("解除済みの予定の再削除: %v", err)
+	}
+	b, err := s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Schedules) != 1 || b.Schedules[0] != remaining {
+		t.Fatalf("別の予定が変更されました: %+v", b.Schedules)
+	}
+}
+
 func TestRunDueResumesPendingCardAndRecordsSimultaneousSchedules(t *testing.T) {
 	s := store.Store{Dir: t.TempDir()}
 	now := time.Date(2026, 11, 23, 9, 0, 0, 0, time.Local)
