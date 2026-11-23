@@ -25,43 +25,63 @@ func (u *boardUI) renderCardDetail(c card) {
 		return
 	}
 	u.detail.SetText(body)
-	hint := "↑↓ スクロール   Esc 戻る"
+	hint := ""
+	if c.canChangeProject() {
+		hint = "p 作業先を変更   "
+	}
+	for _, shortcut := range u.designShortcuts() {
+		hint += string(shortcut.key) + " " + shortcut.label + "   "
+	}
+	u.setCardHint(hint + "↑↓ スクロール   Esc 戻る")
+}
+
+type designShortcut struct {
+	key   rune
+	label string
+	run   func()
+}
+
+func (u *boardUI) designShortcuts() []designShortcut {
+	c := u.detailCard
 	switch {
 	case c.canStartDesign():
-		hint = "d 設計から開始   " + hint
+		return []designShortcut{
+			{'d', "設計から開始", func() { u.launchDetailPhase(designPhase, "") }},
+		}
 	case c.Status == awaitingResultReview:
-		hint = "a 結果を承認して完了   " + hint
+		return []designShortcut{{'a', "結果を承認して完了", u.approveDetailResult}}
 	case c.canReviewDesign():
-		hint = "a 承認して実装   r コメントして再設計   " + hint
+		return []designShortcut{
+			{'a', "承認して実装", func() { u.launchDetailPhase(implementationPhase, "") }},
+			{'r', "コメントして再設計", u.editFeedback},
+		}
 	}
-	if c.canChangeProject() {
-		hint = "p 作業先を変更   " + hint
-	}
-	u.setCardHint(hint)
+	return nil
 }
 
 func (u *boardUI) designKey(key rune) bool {
-	c := u.detailCard
-	switch {
-	case key == 'd' && c.canStartDesign():
-		u.launchDetailPhase(designPhase, "")
-	case key == 'a' && c.Status == awaitingResultReview:
-		u.notice.SetText("")
-		err := approveResult(u.store, *c)
-		u.refresh()
-		if err != nil {
-			u.notice.SetText(err.Error())
+	for _, shortcut := range u.designShortcuts() {
+		if key == shortcut.key {
+			shortcut.run()
+			return true
 		}
-	case key == 'a' && c.canReviewDesign():
-		u.launchDetailPhase(implementationPhase, "")
-	case key == 'r' && c.canReviewDesign():
-		u.edit("")
-		u.input.SetLabel("再設計のコメント > ")
-		u.editingFeedback = true
-	default:
-		return false
 	}
-	return true
+	return false
+}
+
+func (u *boardUI) approveDetailResult() {
+	u.notice.SetText("")
+	err := approveResult(u.store, *u.detailCard)
+	u.refresh()
+	if err != nil {
+		u.notice.SetText(err.Error())
+	}
+}
+
+func (u *boardUI) editFeedback() {
+	u.edit("")
+	u.input.SetLabel("再設計のコメント > ")
+	u.editingFeedback = true
 }
 
 func (u *boardUI) closeFeedbackEditor() {
