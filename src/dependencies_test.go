@@ -82,9 +82,10 @@ func TestPackageDependencies(t *testing.T) {
 				}
 			}
 			switch name {
-			case "src/tui/taskboard":
-				if localImport && packageLayer(target) != "domain" {
-					t.Errorf("%s → %s: タスクボードの表示状態が参照できるモジュール内の層は domain だけです", name, target)
+			case "src/tui/taskboard", "src/tui/agentlist", "src/tui/detail", "src/tui/automation":
+				usesPaneTypes := name == "src/tui/agentlist" && target == "src/infrastructure/herdr"
+				if localImport && packageLayer(target) != "domain" && !usesPaneTypes {
+					t.Errorf("%s → %s: 表示用パッケージの依存範囲外です", name, target)
 				}
 			case "src/domain/schedule", "src/infrastructure/herdr":
 				if !standard[dep] {
