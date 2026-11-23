@@ -61,10 +61,6 @@ func (c Card) CanChangeProject() bool {
 
 func (c Card) manual() bool { return c.Source == "" && c.ScheduleID == 0 }
 
-func (c Card) CanReviewResult() bool {
-	return c.manual() && c.Phase == ImplementationPhase && c.Status == AwaitingResultReview
-}
-
 func (c Card) CanReopen() bool {
 	return c.ReopenTarget() != ""
 }
@@ -95,46 +91,4 @@ func (c *Card) Reopen() bool {
 	// 同じ状態に戻った後も、別ペインに残っている古い操作を区別する。
 	c.ReopenCount++
 	return true
-}
-
-const (
-	DesignPhase         = "design"
-	ImplementationPhase = "implementation"
-)
-
-func (c Card) CanStartDesign() bool {
-	return c.manual() && (c.Status == Todo || (c.Status == Failed && c.Phase == DesignPhase))
-}
-
-func (c Card) CanReviewDesign() bool {
-	return c.manual() && c.Status == AwaitingDesignReview && c.Phase == DesignPhase && c.Design != ""
-}
-
-func (c Card) PhaseLabel() string {
-	switch c.Status {
-	case Canceled:
-		return "キャンセル済み"
-	case Failed:
-		switch c.Phase {
-		case DesignPhase:
-			return "設計失敗"
-		case ImplementationPhase:
-			return "実装失敗"
-		}
-		return "失敗"
-	case AwaitingDesignReview:
-		return "設計完了（承認待ち）"
-	case AwaitingResultReview:
-		return "実装結果の確認待ち"
-	}
-	switch c.Phase {
-	case DesignPhase:
-		return "設計中"
-	case ImplementationPhase:
-		if c.Status == Done {
-			return "実装完了"
-		}
-		return "実装中"
-	}
-	return ""
 }

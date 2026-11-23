@@ -3,7 +3,6 @@ package worker
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
@@ -34,32 +33,7 @@ func StartPhase(s store.Store, herdr string, seen board.Card, phase, feedback st
 		if *c != seen {
 			return errors.New("カードが更新されました。最新の詳細を確認してください")
 		}
-		switch phase {
-		case board.DesignPhase:
-			if c.CanReviewDesign() {
-				feedback = strings.TrimSpace(feedback)
-				if feedback == "" {
-					return errors.New("再設計のコメントを入力してください")
-				}
-				c.Feedback = feedback
-			} else if !c.CanStartDesign() {
-				return errors.New("このカードは設計を開始できません")
-			}
-		case board.ImplementationPhase:
-			if c.CanReviewResult() {
-				feedback = strings.TrimSpace(feedback)
-				if feedback == "" {
-					return errors.New("実装の修正内容を入力してください")
-				}
-				c.ImplementationFeedback, c.PreviousResult = feedback, c.Result
-			} else if !c.CanReviewDesign() {
-				return errors.New("レビュー待ちの設計案がありません")
-			}
-		default:
-			return errors.New("不明なフェーズです")
-		}
-		c.Phase = phase
-		return nil
+		return c.PreparePhase(phase, feedback)
 	})
 }
 
