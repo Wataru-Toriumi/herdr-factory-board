@@ -64,17 +64,17 @@ func (u *boardUI) designShortcuts() []designShortcut {
 			{'a', "結果を承認して完了", u.approveDetailResult},
 			{'r', "修正を依頼", u.editFeedback},
 		}
-	case c.CanReopen():
-		label := "未着手に戻す"
-		if c.Status == board.Done {
-			label = "承認を取り消す"
-		}
-		return []designShortcut{{'u', label, u.reopenDetail}}
 	case c.CanReviewDesign():
 		return []designShortcut{
 			{'a', "承認して実装", func() { u.launchDetailPhase(board.ImplementationPhase, "") }},
 			{'r', "コメントして再設計", u.editFeedback},
 		}
+	}
+	switch c.ReopenTarget() {
+	case board.Todo:
+		return []designShortcut{{'u', "未着手に戻す", u.reopenDetail}}
+	case board.AwaitingResultReview:
+		return []designShortcut{{'u', "承認を取り消す", u.reopenDetail}}
 	}
 	return nil
 }

@@ -66,7 +66,35 @@ func (c Card) CanReviewResult() bool {
 }
 
 func (c Card) CanReopen() bool {
-	return c.manual() && (c.Status == Canceled || (c.Status == Done && c.Phase == ImplementationPhase))
+	return c.ReopenTarget() != ""
+}
+
+// ReopenTarget はカードを戻せるステータスを返す。対象外の場合は空文字を返す。
+func (c Card) ReopenTarget() string {
+	if !c.manual() {
+		return ""
+	}
+	switch {
+	case c.Status == Canceled:
+		return Todo
+	case c.Status == Done && c.Phase == ImplementationPhase:
+		return AwaitingResultReview
+	}
+	return ""
+}
+
+func (c *Card) Reopen() bool {
+	target := c.ReopenTarget()
+	if target == "" {
+		return false
+	}
+	if target == Todo {
+		c.Phase, c.Pane = "", ""
+	}
+	c.Status = target
+	// 同じ状態に戻った後も、別ペインに残っている古い操作を区別する。
+	c.ReopenCount++
+	return true
 }
 
 const (

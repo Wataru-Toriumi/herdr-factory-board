@@ -21,15 +21,8 @@ func ApproveResult(s store.Store, seen board.Card) error {
 
 func Reopen(s store.Store, seen board.Card) error {
 	return s.EditCard(seen.ID, func(c *board.Card) error {
-		if *c != seen || !c.CanReopen() {
+		if *c != seen || !c.Reopen() {
 			return errors.New("カードを戻せません。最新の状態を確認してください")
-		}
-		// 同じ状態に戻った後も、別ペインに残っている古い操作を区別する。
-		c.ReopenCount++
-		if c.Status == board.Done {
-			c.Status = board.AwaitingResultReview
-		} else {
-			c.Status, c.Phase, c.Pane = board.Todo, "", ""
 		}
 		return nil
 	})
