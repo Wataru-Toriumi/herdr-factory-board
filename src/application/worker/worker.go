@@ -86,7 +86,7 @@ func Run(s store.Store) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go watchCardCancellation(ctx, cancel, s, task)
-	status, result := runAgent(ctx, task, resultPath)
+	status, result := runAgent(ctx, task, lock, resultPath)
 	return s.EditCard(id, func(c *board.Card) error {
 		c.FinishAttempt(task.Attempt, task.Phase, status, result)
 		return nil
@@ -115,12 +115,11 @@ func watchCardCancellation(ctx context.Context, cancel context.CancelFunc, s sto
 	}
 }
 
-// ワーカーは実行中、カードごとのロックを保持する。
-// 終了状態を記録する前に異常終了してもロックは解放されるため、カードを復旧できる。
+// ワーカーとエージェントの両方が終了したカードだけを復旧する。
 func Recover(s store.Store, id int) error {
 	l, err := s.Lock(workerLockName(id), true)
 	if errors.Is(err, syscall.EWOULDBLOCK) {
-		return errors.New("担当ペインは実行中です")
+		return errors.New("ワーカーまたは担当エージェントが実行中です。終了後に recover を再試行してください")
 	}
 	if err != nil {
 		return err

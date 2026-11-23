@@ -47,7 +47,12 @@ esac
 			task := board.Card{Agent: board.Claude, Dir: t.TempDir(), Phase: tc.phase, Prompt: "元のタスク", Design: "承認済みの案"}
 			t.Setenv("PHASE", tc.phase)
 			t.Setenv("MODE", tc.mode)
-			status, result := runAgent(context.Background(), task, "")
+			lock, err := os.CreateTemp(t.TempDir(), "lock")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer lock.Close()
+			status, result := runAgent(context.Background(), task, lock, "")
 			if status != tc.status || !strings.Contains(result, tc.result) {
 				t.Fatalf("状態 = %q, 結果 = %q", status, result)
 			}
