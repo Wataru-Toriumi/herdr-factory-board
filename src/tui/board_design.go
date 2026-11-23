@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
@@ -153,11 +152,5 @@ func nextAgent(current string) string {
 }
 
 func (u *boardUI) changeCardAgent(seen board.Card) {
-	u.finishDetailAction(u.store.EditCard(seen.ID, func(c *board.Card) error {
-		if *c != seen || !c.CanConfigure() {
-			return errors.New("カードが更新されました。最新の状態を確認してください")
-		}
-		c.Agent = nextAgent(seen.Agent)
-		return nil
-	}))
+	u.finishDetailAction(u.store.ChangeCardAgent(seen, nextAgent(seen.Agent)))
 }
