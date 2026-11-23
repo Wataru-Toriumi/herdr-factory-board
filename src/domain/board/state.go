@@ -17,10 +17,20 @@ type State struct {
 	Projects  []string `json:",omitempty"`
 }
 
-func (b *State) NewCard(prompt, dir, source string) *Card {
+func (b *State) allocateID() int {
 	b.NextID++
-	b.Cards = append(b.Cards, Card{ID: b.NextID, Prompt: prompt, Dir: dir, Source: source, Status: Todo})
+	return b.NextID
+}
+
+func (b *State) NewCard(prompt, dir, source string) *Card {
+	b.Cards = append(b.Cards, Card{ID: b.allocateID(), Prompt: prompt, Dir: dir, Source: source, Status: Todo})
 	return &b.Cards[len(b.Cards)-1]
+}
+
+// AddSchedule はカードと共通の通し番号を付けて予定を登録する。
+func (b *State) AddSchedule(rule schedule.Rule) {
+	rule.ID = b.allocateID()
+	b.Schedules = append(b.Schedules, rule)
 }
 
 func (b State) HasDueSchedule(now time.Time) bool {
