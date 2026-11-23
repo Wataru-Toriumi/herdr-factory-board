@@ -53,3 +53,29 @@ func TestAgentSelectionForCardsAndSchedules(t *testing.T) {
 		t.Fatalf("担当変更前後の履歴: %+v, %v", b.Cards, err)
 	}
 }
+
+func TestAgentChangeRejectsStaleCardDetail(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.NewCard("確認", "/api", "")
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.refresh()
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
+	seen := *u.detailCard
+	if err := s.ChangeCardProject(seen, "/web"); err != nil {
+		t.Fatal(err)
+	}
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'g', 0))
+	if got := u.notice.GetText(false); got != "カードが更新されました。最新の状態を確認してください" {
+		t.Fatalf("競合時の表示 = %q", got)
+	}
+	want := seen
+	want.Dir = "/web"
+	if *u.detailCard != want {
+		t.Fatalf("変更後のカード = %+v, 期待値 = %+v", *u.detailCard, want)
+	}
+}
