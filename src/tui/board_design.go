@@ -1,11 +1,16 @@
-package main
+package tui
 
-import "fmt"
+import (
+	"fmt"
 
-func (u *boardUI) renderCardDetail(c card) {
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
+)
+
+func (u *boardUI) renderCardDetail(c board.Card) {
 	u.detailCard = &c
 	body := fmt.Sprintf("#%d  %s\n作業先: %s\n%s", c.ID, c.Status, c.Dir, c.Prompt)
-	if phase := c.phaseLabel(); phase != "" {
+	if phase := c.PhaseLabel(); phase != "" {
 		body += "\n\n" + phase
 	}
 	if c.Design != "" {
@@ -26,7 +31,7 @@ func (u *boardUI) renderCardDetail(c card) {
 	}
 	u.detail.SetText(body)
 	hint := ""
-	if c.canChangeProject() {
+	if c.CanChangeProject() {
 		hint = "p 作業先を変更   "
 	}
 	for _, shortcut := range u.designShortcuts() {
@@ -44,15 +49,15 @@ type designShortcut struct {
 func (u *boardUI) designShortcuts() []designShortcut {
 	c := u.detailCard
 	switch {
-	case c.canStartDesign():
+	case c.CanStartDesign():
 		return []designShortcut{
-			{'d', "設計から開始", func() { u.launchDetailPhase(designPhase, "") }},
+			{'d', "設計から開始", func() { u.launchDetailPhase(board.DesignPhase, "") }},
 		}
-	case c.Status == awaitingResultReview:
+	case c.Status == board.AwaitingResultReview:
 		return []designShortcut{{'a', "結果を承認して完了", u.approveDetailResult}}
-	case c.canReviewDesign():
+	case c.CanReviewDesign():
 		return []designShortcut{
-			{'a', "承認して実装", func() { u.launchDetailPhase(implementationPhase, "") }},
+			{'a', "承認して実装", func() { u.launchDetailPhase(board.ImplementationPhase, "") }},
 			{'r', "コメントして再設計", u.editFeedback},
 		}
 	}
@@ -71,7 +76,7 @@ func (u *boardUI) designKey(key rune) bool {
 
 func (u *boardUI) approveDetailResult() {
 	u.notice.SetText("")
-	err := approveResult(u.store, *u.detailCard)
+	err := worker.ApproveResult(u.store, *u.detailCard)
 	u.refresh()
 	if err != nil {
 		u.notice.SetText(err.Error())
@@ -93,7 +98,7 @@ func (u *boardUI) closeFeedbackEditor() {
 
 func (u *boardUI) launchDetailPhase(phase, feedback string) {
 	u.notice.SetText("")
-	err := launchFromDetail(u.store, u.herdr, *u.detailCard, phase, feedback)
+	err := worker.StartPhase(u.store, u.herdr, *u.detailCard, phase, feedback)
 	u.refresh()
 	if err != nil {
 		u.notice.SetText(err.Error())

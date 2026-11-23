@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"os"
@@ -44,7 +44,7 @@ func (u *boardUI) browseDirectory(path string, choose func(string)) error {
 	list := boardList().ShowSecondaryText(false)
 	list.SetTitle(" 作業先を選択 ").SetTitleAlign(tview.AlignLeft)
 	list.AddItem("このフォルダを作業先にする", "", 0, func() {
-		if err := registerProject(u.store, path); err != nil {
+		if err := u.store.RegisterProject(path); err != nil {
 			u.notice.SetText(err.Error())
 			return
 		}

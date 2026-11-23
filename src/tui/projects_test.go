@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"os"
@@ -7,25 +7,30 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 func TestProjectSelectionAcrossPanes(t *testing.T) {
-	s := store{t.TempDir()}
-	api := filepath.Join(s.dir, "api")
-	web := filepath.Join(s.dir, "web")
+	s := store.Store{Dir: t.TempDir()}
+	api := filepath.Join(s.Dir, "api")
+	web := filepath.Join(s.Dir, "web")
 	for _, dir := range []string{api, web} {
 		if err := os.Mkdir(dir, 0700); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := s.edit(func(b *board) error {
+	if err := s.Edit(func(b *board.State) error {
 		b.Dir = api
-		b.newCard("APIタスク", api, "")
-		b.newCard("Webタスク", web, "")
+		b.NewCard("APIタスク", api, "")
+		b.NewCard("Webタスク", web, "")
 		b.NextID++
-		b.Schedules = []schedule{{ID: b.NextID, Time: "08:00", Dir: web, Prompt: "Web確認"}}
+		b.Schedules = []schedule.Rule{{ID: b.NextID, Time: "08:00", Dir: web, Prompt: "Web確認"}}
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -103,7 +108,7 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	}
 	right.execute("add 右のタスク")
 	choose(right, "web")
-	b, err := s.read()
+	b, err := s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,22 +117,22 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	}
 	right.execute("result 2")
 	key(right, 'p')
-	if err := startCard(s, "true", 2); err != nil {
+	if err := worker.Start(s, "true", 2); err != nil {
 		t.Fatal(err)
 	}
 	choose(right, "api")
-	if right.detailCard.Dir != web || right.detailCard.Status != starting || !strings.Contains(right.notice.GetText(false), "更新") {
+	if right.detailCard.Dir != web || right.detailCard.Status != board.Starting || !strings.Contains(right.notice.GetText(false), "更新") {
 		t.Fatal("選択中に起動したカードの作業先を保護できません")
 	}
-	if err := tick(s, "true", b.Schedules[1].Interval.NextRun); err != nil {
+	if err := scheduler.RunDue(s, "true", b.Schedules[1].Interval.NextRun); err != nil {
 		t.Fatal(err)
 	}
-	b, err = s.read()
+	b, err = s.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range b.Cards {
-		if c.ScheduleID == b.Schedules[1].ID && c.Dir == api && c.Status == starting {
+		if c.ScheduleID == b.Schedules[1].ID && c.Dir == api && c.Status == board.Starting {
 			return
 		}
 	}
@@ -135,20 +140,20 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 }
 
 func TestRegisteredAndHistoricalProjects(t *testing.T) {
-	s := store{t.TempDir()}
-	if err := registerProject(s, s.dir); err != nil {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.RegisterProject(s.Dir); err != nil {
 		t.Fatal(err)
 	}
-	if err := registerProject(s, s.dir); err != nil {
+	if err := s.RegisterProject(s.Dir); err != nil {
 		t.Fatal(err)
 	}
-	b, err := s.read()
-	if err != nil || !slices.Equal(b.Projects, []string{s.dir}) {
+	b, err := s.Read()
+	if err != nil || !slices.Equal(b.Projects, []string{s.Dir}) {
 		t.Fatalf("空のプロジェクトの保存: %+v, %v", b.Projects, err)
 	}
-	b.Cards = []card{{Dir: "/backend/api"}}
-	b.Schedules = []schedule{{Dir: "/frontend/api"}}
-	names := projectNames(b.projectDirs())
+	b.Cards = []board.Card{{Dir: "/backend/api"}}
+	b.Schedules = []schedule.Rule{{Dir: "/frontend/api"}}
+	names := projectNames(b.ProjectDirs())
 	if names["/backend/api"] != "/backend/api" || names["/frontend/api"] != "/frontend/api" {
 		t.Fatalf("同名のプロジェクトを区別できません: %v", names)
 	}
@@ -165,8 +170,8 @@ func TestTypedScheduleProjectSelection(t *testing.T) {
 		{"全体表示に複数件", []string{"/api", "/web"}, "", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s := store{t.TempDir()}
-			if err := s.edit(func(b *board) error { b.Projects = tc.projects; return nil }); err != nil {
+			s := store.Store{Dir: t.TempDir()}
+			if err := s.Edit(func(b *board.State) error { b.Projects = tc.projects; return nil }); err != nil {
 				t.Fatal(err)
 			}
 			u := newBoardUI(s, "true")
@@ -179,7 +184,7 @@ func TestTypedScheduleProjectSelection(t *testing.T) {
 				}
 				u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
 			}
-			b, err := s.read()
+			b, err := s.Read()
 			if err != nil {
 				t.Fatal(err)
 			}

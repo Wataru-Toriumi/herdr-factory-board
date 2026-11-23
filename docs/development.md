@@ -8,5 +8,16 @@ mise install
 go build -o factory-board ./src
 ```
 
-プラグインのメタデータとビルド・起動コマンドは [herdr-plugin.toml](../herdr-plugin.toml)、ボードの画面は [src/board_ui.go](../src/board_ui.go)、コマンド処理は [src/command.go](../src/command.go)、定期実行は [src/scheduler.go](../src/scheduler.go)、カードの実行と復旧は [src/worker.go](../src/worker.go)、Herdr CLI との連携は [src/herdr.go](../src/herdr.go) にあります。
-コードを変更したら、`go build -o factory-board ./src` を再実行し、ペインを開き直してください。
+プラグインのビルドと各ペインの起動コマンドは [herdr-plugin.toml](../herdr-plugin.toml) で定義しています。コードを変更したら、`go test ./...` で全パッケージをテストし、再ビルドしてペインを開き直してください。
+
+## パッケージ構成
+
+- [main.go](../src/main.go) はワークスペースの保存先を開き、起動引数に応じてボード画面、ワーカー、スケジューラーを起動します。
+- [src/tui](../src/tui) はボードの各タブ、カード詳細、作業先の選択、キー操作を担当します。
+- [src/command](../src/command) は入力したコマンドを解析し、カードの追加や定期実行の登録などを実行します。
+- [src/scheduler](../src/scheduler) は定期実行の登録・変更・解除とスケジューラーの起動を担当します。実行時刻を迎えた予定からカードを作り、ワーカーに渡します。
+- [src/board](../src/board) はカードとボードの状態を定義します。設計を開始できる条件、レビューできる条件、ボードに属するプロジェクトの一覧はここで扱います。
+- [src/store](../src/store) はワークスペースごとの `board.json` の読み書きとファイルロックを担当します。`Edit` と `EditCard` はロック内で最新の状態を読み、変更が成功したときに保存します。
+- [src/worker](../src/worker) はカードの起動、Codex の実行、結果の記録、キャンセル、中断からの復旧を担当します。設計案とレビューコメントを実行時のプロンプトに組み込む処理もここにあります。
+- [src/herdr](../src/herdr) は Herdr CLI を呼び出し、ペイン・ワークスペースの一覧取得、タブの起動、フォーカス移動を担当します。
+- [src/schedule](../src/schedule) は毎日決まった時刻に実行する予定と、一定の間隔で実行する予定を扱います。予定が実行時刻を迎えたかを判定し、実行した予定の次回時刻や最終実行日を更新します。
