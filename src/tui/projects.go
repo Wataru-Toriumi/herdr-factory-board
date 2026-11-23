@@ -7,22 +7,6 @@ import (
 	"github.com/rivo/tview"
 )
 
-func projectNames(dirs []string) map[string]string {
-	counts := make(map[string]int)
-	for _, dir := range dirs {
-		counts[filepath.Base(dir)]++
-	}
-	names := make(map[string]string, len(dirs))
-	for _, dir := range dirs {
-		name := filepath.Base(dir)
-		if counts[name] > 1 {
-			name = dir
-		}
-		names[dir] = name
-	}
-	return names
-}
-
 func (u *boardUI) pickProject(current string, filter bool, selected func(string)) {
 	choose := func(dir string) {
 		u.closeDirectory()

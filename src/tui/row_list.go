@@ -30,25 +30,23 @@ func (l *rowList[T]) setRows(rows []T, sameItem func(T, T) bool, labels func(T) 
 		return
 	}
 	selected, _ := l.selected()
-	l.replaceRows(rows, func(row T) bool { return sameItem(row, selected) }, labels)
+	index := l.GetCurrentItem()
+	for i, row := range rows {
+		if sameItem(row, selected) {
+			index = i
+		}
+	}
+	l.replaceRows(rows, index, labels)
 }
 
-// 指定の項目を選択できたかを返す。見つからなければ元の行番号を使う。
-func (l *rowList[T]) replaceRows(rows []T, matches func(T) bool, labels func(T) (string, string)) bool {
-	index := l.GetCurrentItem()
-	found := false
+func (l *rowList[T]) replaceRows(rows []T, index int, labels func(T) (string, string)) {
 	l.Clear()
-	for i, row := range rows {
+	for _, row := range rows {
 		title, subtitle := labels(row)
 		l.AddItem(tview.Escape(title), tview.Escape(subtitle), 0, nil)
-		if matches(row) {
-			index = i
-			found = true
-		}
 	}
 	if len(rows) > 0 {
 		l.SetCurrentItem(min(max(index, 0), len(rows)-1))
 	}
 	l.rows = rows
-	return found
 }

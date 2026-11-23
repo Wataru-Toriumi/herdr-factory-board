@@ -82,6 +82,10 @@ func TestPackageDependencies(t *testing.T) {
 				}
 			}
 			switch name {
+			case "src/tui/taskboard":
+				if localImport && packageLayer(target) != "domain" {
+					t.Errorf("%s → %s: タスクボードの表示状態が参照できるモジュール内の層は domain だけです", name, target)
+				}
 			case "src/domain/schedule", "src/infrastructure/herdr":
 				if !standard[dep] {
 					t.Errorf("%s → %s: 標準ライブラリだけを利用できます", name, dep)

@@ -8,6 +8,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -18,7 +19,7 @@ type boardUI struct {
 	herdr                                 string
 	pages                                 *tview.Pages
 	columns                               *tview.Flex
-	lists                                 [len(taskLanes)]*rowList[board.Card]
+	lists                                 [len(taskLanes)]*rowList[taskboard.Row]
 	agents                                *agentList
 	schedules                             *scheduleList
 	header, context, hint, notice, detail *tview.TextView
@@ -27,7 +28,6 @@ type boardUI struct {
 	workDir                               string
 	editor                                inputSession
 	projects                              []string
-	taskProjectNames                      map[string]string
 	detailScheduleID                      int
 	detailBody                            string
 	detailCard                            *board.Card
@@ -67,7 +67,7 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 		schedules: &scheduleList{rowList: newRowList[schedule.Rule]()},
 	}
 	for i, lane := range taskLanes {
-		u.lists[i] = newRowList[board.Card]()
+		u.lists[i] = newRowList[taskboard.Row]()
 		u.lists[i].SetTitleColor(lane.color)
 	}
 	u.layoutColumns()
@@ -123,7 +123,8 @@ func (u *boardUI) activePage() string {
 }
 
 func (u *boardUI) selectedCard() (board.Card, bool) {
-	return u.lists[u.lane].selected()
+	row, ok := u.lists[u.lane].selected()
+	return row.Card, ok
 }
 
 func (u *boardUI) showWorkDir() {

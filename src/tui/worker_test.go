@@ -10,6 +10,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -57,11 +58,11 @@ func TestCancelRunningWorker(t *testing.T) {
 		t.Fatal("キャンセル後もワーカーが実行中です")
 	}
 	b, err := s.Read()
-	if err != nil || cardLane(b.Cards[0]) != failedOrCanceledLane || u.detailCard.Status != board.Canceled {
+	if err != nil || taskboard.LaneFor(b.Cards[0]) != taskboard.FailedOrCanceled || u.detailCard.Status != board.Canceled {
 		t.Fatalf("キャンセル後のカード: %+v, %v", b, err)
 	}
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'u', 0))
-	if c := u.detailCard; c.Status != board.Todo || u.lane != todoLane || c.Dir != s.Dir || c.ID != 1 || c.Pane != "" {
+	if c := u.detailCard; c.Status != board.Todo || u.lane != taskboard.Todo || c.Dir != s.Dir || c.ID != 1 || c.Pane != "" {
 		t.Fatalf("再オープン後のカード: %+v", c)
 	}
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'd', 0))

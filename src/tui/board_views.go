@@ -2,67 +2,28 @@ package tui
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 )
 
-func cardListLabel(c board.Card, lane int, project string) string {
-	label := fmt.Sprintf("#%d", c.ID)
-	if project != "" {
-		label += "  " + project
-	}
-	if c.Source != "" {
-		label += "  " + c.Source
-	}
-	if c.Status == board.Starting {
-		label += "  起動中"
-	}
-	phase := c.PhaseLabel()
-	if phase == "" {
-		return label
-	}
-	if lane == failedOrCanceledLane {
-		return phase + "  " + label
-	}
-	return label + "  " + phase
-}
-
-// 自動更新時は、選択中のカード番号を使って移動先の列と行を復元する。
 func (u *boardUI) renderTasks(cards []board.Card) {
-	var names map[string]string
-	if u.workDir == "" {
-		names = projectNames(u.projects)
-	}
-	labelsChanged := !maps.Equal(names, u.taskProjectNames)
-	u.taskProjectNames = names
-	var groups [len(taskLanes)][]board.Card
-	for _, c := range cards {
-		if u.workDir != "" && c.Dir != u.workDir {
-			continue
-		}
-		if i := cardLane(c); i >= 0 {
-			groups[i] = append(groups[i], c)
-		}
-	}
 	selected, _ := u.selectedCard()
-	isSelected := func(c board.Card) bool { return c.ID == selected.ID }
-	selectedLane := u.lane
-	for i, group := range groups {
-		list := u.lists[i]
-		if labelsChanged || !slices.Equal(list.rows, group) {
-			found := list.replaceRows(group, isSelected, func(c board.Card) (string, string) {
-				return c.Prompt, cardListLabel(c, i, names[c.Dir])
-			})
-			if found {
-				selectedLane = i
+	model := taskboard.Build(cards, u.projects, u.workDir, u.lane, selected.ID)
+	for lane, rows := range model.Rows {
+		list := u.lists[lane]
+		if !slices.Equal(list.rows, rows) {
+			index := list.GetCurrentItem()
+			if lane == model.SelectedLane && model.SelectedRow >= 0 {
+				index = model.SelectedRow
 			}
+			list.replaceRows(rows, index, taskboard.Row.Labels)
 		}
-		list.SetTitle(fmt.Sprintf(" %s %d ", taskLanes[i].name, len(group)))
+		list.SetTitle(fmt.Sprintf(" %s %d ", taskLanes[lane].name, len(rows)))
 	}
-	u.selectLane(selectedLane)
+	u.selectLane(model.SelectedLane)
 }
 
 func (u *boardUI) selectLane(lane int) {
