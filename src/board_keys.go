@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -59,7 +60,7 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "タスクを選んで v で詳細を表示。Enter で開始・担当ペインへ移動・結果表示。")
 	fmt.Fprintln(&text, "カードの詳細で x を押すと、そのタスクをキャンセルします。定期実行の次回以降の予定は継続します。")
 	fmt.Fprintln(&text, "手動タスクの詳細で d から設計。設計案を確認し、a で承認・実装、r でコメントして再設計。実装後はレビュー中のカードで結果を確認し、a で完了。")
-	fmt.Fprintln(&text, "p で作業先を選択、n でタスクを追加。初回はフォルダ選択から始めます。")
+	fmt.Fprintln(&text, "一覧の p で表示を絞り込みます。n でタスクごとの作業先を選択。未着手の手動タスクは詳細の p で作業先を変更できます。")
 	fmt.Fprintln(&text, "コマンドはそのまま入力し、Enter で確定。Esc でキャンセル。")
 	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容")
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
@@ -112,8 +113,9 @@ func (u *boardUI) submitInput() {
 		return
 	}
 	if u.editingScheduleID == 0 {
+		dir := u.inputDir
 		u.switchView()
-		u.execute(value)
+		u.executeAt(value, dir)
 		return
 	}
 	if err := updateScheduleTiming(u.store, u.editingScheduleID, value); err != nil {
@@ -125,19 +127,46 @@ func (u *boardUI) submitInput() {
 }
 
 func (u *boardUI) composeAtWorkDir(prefix string) {
-	if u.workDir == "" {
-		u.pickDirectory(prefix)
-	} else {
-		u.edit(prefix)
+	switch {
+	case u.workDir != "":
+		u.editForProject(prefix, u.workDir)
+	case len(u.projects) == 1:
+		u.editForProject(prefix, u.projects[0])
+	default:
+		u.pickProject(u.workDir, false, func(dir string) { u.editForProject(prefix, dir) })
 	}
 }
 
 func (u *boardUI) execute(line string) {
+	u.executeAt(line, "")
+}
+
+func (u *boardUI) executeAt(line, dir string) {
 	u.notice.SetText("")
-	c, err := command(u.store, u.herdr, line)
+	name, arg, _ := strings.Cut(strings.TrimSpace(line), " ")
+	if dir == "" && name == "add" && strings.TrimSpace(arg) != "" {
+		u.pickProject(u.workDir, false, func(dir string) { u.executeAt(line, dir) })
+		return
+	}
+	if dir == "" {
+		dir = u.workDir
+	}
+	if dir == "" && (name == "daily" || name == "every") {
+		if len(u.projects) != 1 {
+			u.pickProject(u.workDir, false, func(dir string) { u.executeAt(line, dir) })
+			return
+		}
+		dir = u.projects[0]
+	}
+	c, err := command(u.store, u.herdr, dir, line)
+	if err == nil && name == "dir" {
+		u.workDir = filepath.Clean(strings.TrimSpace(arg))
+	}
 	u.refresh()
 	if err != nil {
 		u.notice.SetText(err.Error())
+	} else if name == "add" && u.workDir != "" && dir != u.workDir {
+		u.notice.SetText("チケットを追加しました。作業先: " + dir)
 	} else if c != nil {
 		u.read("カードの詳細", "", c.sourceScheduleID())
 		u.renderCardDetail(*c)
@@ -180,6 +209,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	case "directory":
 		if key == tcell.KeyEscape {
 			u.closeDirectory()
+			u.refresh()
 			return nil
 		}
 		return event
@@ -201,6 +231,10 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	case "detail":
+		if key == tcell.KeyRune && event.Rune() == 'p' && u.detailCard != nil && u.detailCard.canChangeProject() {
+			u.pickCardProject(*u.detailCard)
+			return nil
+		}
 		if key == tcell.KeyRune && event.Rune() == 'x' && u.detailCard != nil && u.detailCard.canCancel() {
 			err := cancelCard(u.store, *u.detailCard)
 			u.refresh()
@@ -272,7 +306,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			if u.tab == automationTab {
 				u.composeAtWorkDir("daily ")
 			} else {
-				u.composeAtWorkDir("add ")
+				u.pickProject(u.workDir, false, func(dir string) { u.editForProject("add ", dir) })
 			}
 		case 'i':
 			if u.tab == automationTab {
@@ -281,7 +315,10 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 				u.edit("i")
 			}
 		case 'p':
-			u.pickDirectory("")
+			u.pickProject(u.workDir, true, func(dir string) {
+				u.workDir = dir
+				u.refresh()
+			})
 		case 'q', 'Q':
 			u.app.Stop()
 		case ':':

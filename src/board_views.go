@@ -2,14 +2,18 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func cardListLabel(c card, lane int) string {
+func cardListLabel(c card, lane int, project string) string {
 	label := fmt.Sprintf("#%d", c.ID)
+	if project != "" {
+		label += "  " + project
+	}
 	if c.Source != "" {
 		label += "  " + c.Source
 	}
@@ -28,8 +32,17 @@ func cardListLabel(c card, lane int) string {
 
 // 自動更新時は、選択中のカード番号を使って移動先の列と行を復元する。
 func (u *boardUI) renderTasks(cards []card) {
+	var names map[string]string
+	if u.workDir == "" {
+		names = projectNames(u.projects)
+	}
+	labelsChanged := !maps.Equal(names, u.taskProjectNames)
+	u.taskProjectNames = names
 	groups := make([][]card, len(laneNames))
 	for _, c := range cards {
+		if u.workDir != "" && c.Dir != u.workDir {
+			continue
+		}
 		if i := cardLane(c); i >= 0 {
 			groups[i] = append(groups[i], c)
 		}
@@ -37,11 +50,11 @@ func (u *boardUI) renderTasks(cards []card) {
 	selected, _ := u.selectedCard()
 	for i, group := range groups {
 		list := u.lists[i]
-		if !reflect.DeepEqual(u.cards[i], group) {
+		if labelsChanged || !reflect.DeepEqual(u.cards[i], group) {
 			index := list.GetCurrentItem()
 			list.Clear()
 			for j, c := range group {
-				list.AddItem(tview.Escape(c.Prompt), tview.Escape(cardListLabel(c, i)), 0, nil)
+				list.AddItem(tview.Escape(c.Prompt), tview.Escape(cardListLabel(c, i, names[c.Dir])), 0, nil)
 				if selected.ID == c.ID {
 					index = j
 					if u.lane != i {
@@ -109,11 +122,12 @@ func (u *boardUI) renderAgents(rows []agentRow) {
 
 type scheduleList struct {
 	*tview.List
+	all   []schedule
 	rules []schedule
 }
 
 func (l *scheduleList) byID(id int) (schedule, bool) {
-	for _, r := range l.rules {
+	for _, r := range l.all {
 		if r.ID == id {
 			return r, true
 		}
@@ -129,7 +143,17 @@ func (l *scheduleList) selected() (schedule, bool) {
 	return l.rules[i], true
 }
 
-func (l *scheduleList) render(rules []schedule, active bool, err error) {
+func (l *scheduleList) render(all []schedule, dir string, active bool, err error) {
+	l.all = all
+	rules := all
+	if dir != "" {
+		rules = nil
+		for _, r := range all {
+			if r.Dir == dir {
+				rules = append(rules, r)
+			}
+		}
+	}
 	state := "停止中"
 	if err != nil {
 		state = "状態不明"

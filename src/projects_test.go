@@ -1,0 +1,155 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+)
+
+func TestProjectSelectionAcrossPanes(t *testing.T) {
+	s := store{t.TempDir()}
+	api := filepath.Join(s.dir, "api")
+	web := filepath.Join(s.dir, "web")
+	for _, dir := range []string{api, web} {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.edit(func(b *board) error {
+		b.Dir = api
+		b.newCard("APIタスク", api, "")
+		b.newCard("Webタスク", web, "")
+		b.NextID++
+		b.Schedules = []schedule{{ID: b.NextID, Time: "08:00", Dir: web, Prompt: "Web確認"}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	left, right := newBoardUI(s, "true"), newBoardUI(s, "true")
+	left.refresh()
+	right.refresh()
+	key := func(u *boardUI, ch rune) { u.key(tcell.NewEventKey(tcell.KeyRune, ch, 0)) }
+	press := func(u *boardUI, k tcell.Key) { u.key(tcell.NewEventKey(k, 0, 0)) }
+	choose := func(u *boardUI, name string) {
+		t.Helper()
+		page, view := u.pages.GetFrontPage()
+		list, ok := view.(*tview.List)
+		if page != "directory" || !ok {
+			t.Fatal("プロジェクトの選択画面が開いていません")
+		}
+		for i := 0; i < list.GetItemCount(); i++ {
+			main, _ := list.GetItemText(i)
+			if main == name {
+				list.SetCurrentItem(i)
+				list.InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
+				return
+			}
+		}
+		t.Fatalf("選択肢に %q がありません", name)
+	}
+
+	if !slices.Equal(left.projects, []string{api, web}) || len(left.cards[todoLane]) != 2 {
+		t.Fatal("旧版のボードからプロジェクトを復元できません")
+	}
+	_, label := left.lists[todoLane].GetItemText(1)
+	if !strings.Contains(label, "web") {
+		t.Fatalf("全体表示のカードにプロジェクト名がありません: %s", label)
+	}
+
+	key(left, 'p')
+	choose(left, "api")
+	key(left, 'n')
+	choose(left, "web")
+	left.input.SetText("add 左のタスク")
+	right.execute("dir " + web)
+	left.refresh()
+	press(left, tcell.KeyEnter)
+	if left.workDir != api || len(left.cards[todoLane]) != 1 || left.schedules.GetItemCount() != 0 {
+		t.Fatal("APIのカードと予定に絞り込まれていません")
+	}
+	right.refresh()
+	if len(right.cards[todoLane]) != 2 || right.schedules.GetItemCount() != 1 {
+		t.Fatal("Webのカードと予定に絞り込まれていません")
+	}
+
+	right.lists[todoLane].SetCurrentItem(1)
+	key(right, 'v')
+	key(right, 'p')
+	press(right, tcell.KeyEscape)
+	if right.activePage() != "detail" || right.detailCard.Dir != web {
+		t.Fatal("作業先の選択を取り消すと元のチケット詳細に戻れません")
+	}
+	key(right, 'p')
+	choose(right, "api")
+	if right.activePage() != "detail" || right.detailCard.Dir != api || right.workDir != web || len(right.cards[todoLane]) != 1 {
+		t.Fatal("チケットの作業先変更が反映されません")
+	}
+	press(right, tcell.KeyEscape)
+
+	key(left, 'p')
+	choose(left, "すべて")
+	press(left, tcell.KeyBacktab)
+	key(left, 'i')
+	choose(left, "api")
+	left.input.SetText("every 15m API確認")
+	press(left, tcell.KeyEnter)
+	if left.workDir != "" || left.schedules.GetItemCount() != 2 {
+		t.Fatal("全体表示から予定を登録できません")
+	}
+	right.execute("add 右のタスク")
+	choose(right, "web")
+	b, err := s.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Cards[2].Dir != api || b.Cards[3].Dir != web || b.Schedules[1].Dir != api {
+		t.Fatalf("ペインごとの登録先が不正です: %+v", b)
+	}
+	right.execute("result 2")
+	key(right, 'p')
+	if err := startCard(s, "true", 2); err != nil {
+		t.Fatal(err)
+	}
+	choose(right, "api")
+	if right.detailCard.Dir != web || right.detailCard.Status != starting || !strings.Contains(right.notice.GetText(false), "更新") {
+		t.Fatal("選択中に起動したカードの作業先を保護できません")
+	}
+	if err := tick(s, "true", b.Schedules[1].Interval.NextRun); err != nil {
+		t.Fatal(err)
+	}
+	b, err = s.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range b.Cards {
+		if c.ScheduleID == b.Schedules[1].ID && c.Dir == api && c.Status == starting {
+			return
+		}
+	}
+	t.Fatal("APIの予定が登録先で起動しませんでした")
+}
+
+func TestRegisteredAndHistoricalProjects(t *testing.T) {
+	s := store{t.TempDir()}
+	if err := registerProject(s, s.dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := registerProject(s, s.dir); err != nil {
+		t.Fatal(err)
+	}
+	b, err := s.read()
+	if err != nil || !slices.Equal(b.Projects, []string{s.dir}) {
+		t.Fatalf("空のプロジェクトの保存: %+v, %v", b.Projects, err)
+	}
+	b.Cards = []card{{Dir: "/backend/api"}}
+	b.Schedules = []schedule{{Dir: "/frontend/api"}}
+	names := projectNames(b.projectDirs())
+	if names["/backend/api"] != "/backend/api" || names["/frontend/api"] != "/frontend/api" {
+		t.Fatalf("同名のプロジェクトを区別できません: %v", names)
+	}
+}

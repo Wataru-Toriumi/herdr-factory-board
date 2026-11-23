@@ -53,7 +53,7 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 			s := store{t.TempDir()}
 			u := newBoardUI(s, "")
 			u.workDir = s.dir
-			cards := []card{{ID: 1, Status: todo}}
+			cards := []card{{ID: 1, Status: todo, Dir: s.dir}}
 			u.renderTasks(cards)
 			u.key(tcell.NewEventKey(tcell.KeyRune, tc.key, 0))
 			page, view := u.pages.GetFrontPage()
@@ -143,7 +143,7 @@ func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
 	u.refresh()
 	u.key(tcell.NewEventKey(tcell.KeyBacktab, 0, 0))
 	u.schedules.SetCurrentItem(1)
-	if _, err := command(s, "true", "remove 1"); err != nil {
+	if _, err := command(s, "true", s.dir, "remove 1"); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
@@ -158,7 +158,7 @@ func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
 
 func TestAutomationTabIntervalShortcut(t *testing.T) {
 	s := store{t.TempDir()}
-	if err := setWorkDir(s, s.dir); err != nil {
+	if err := registerProject(s, s.dir); err != nil {
 		t.Fatal(err)
 	}
 	u := newBoardUI(s, "true")
@@ -215,7 +215,7 @@ func TestEditIntervalFromAutomationTab(t *testing.T) {
 		t.Fatal("入力エラーを修正できません")
 	}
 	// 編集中に先頭の予定が消えても、保存対象は同じ番号の予定。
-	if _, err := command(s, "true", "remove 1"); err != nil {
+	if _, err := command(s, "true", s.dir, "remove 1"); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
@@ -284,7 +284,7 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	if text := u.detail.GetText(false); u.activePage() != "detail" || !strings.Contains(text, "#4") || !strings.Contains(text, "15分おき") {
 		t.Fatalf("取り消し後のタスク詳細: %s", text)
 	}
-	if _, err := command(s, "true", "remove 2"); err != nil {
+	if _, err := command(s, "true", s.dir, "remove 2"); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()

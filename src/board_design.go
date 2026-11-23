@@ -4,7 +4,7 @@ import "fmt"
 
 func (u *boardUI) renderCardDetail(c card) {
 	u.detailCard = &c
-	body := fmt.Sprintf("#%d  %s  %s\n%s", c.ID, c.Status, c.Dir, c.Prompt)
+	body := fmt.Sprintf("#%d  %s\n作業先: %s\n%s", c.ID, c.Status, c.Dir, c.Prompt)
 	if phase := c.phaseLabel(); phase != "" {
 		body += "\n\n" + phase
 	}
@@ -33,6 +33,9 @@ func (u *boardUI) renderCardDetail(c card) {
 		hint = "a 結果を承認して完了   " + hint
 	case c.canReviewDesign():
 		hint = "a 承認して実装   r コメントして再設計   " + hint
+	}
+	if c.canChangeProject() {
+		hint = "p 作業先を変更   " + hint
 	}
 	u.setCardHint(hint)
 }

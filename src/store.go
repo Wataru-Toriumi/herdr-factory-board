@@ -86,6 +86,7 @@ type board struct {
 	Dir       string
 	Cards     []card
 	Schedules []schedule
+	Projects  []string `json:",omitempty"`
 }
 
 func (b *board) newCard(prompt, dir, source string) *card {

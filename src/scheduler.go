@@ -40,21 +40,21 @@ func tryAcquireSchedulerLock(s store) (*os.File, error) {
 	return lock, err
 }
 
-func registerSchedule(s store, herdr, kind, arg string) error {
+func registerSchedule(s store, herdr, dir, kind, arg string) error {
 	when, prompt, _ := strings.Cut(arg, " ")
 	rule := schedule{Prompt: strings.TrimSpace(prompt)}
 	if rule.Prompt == "" {
 		return errors.New("作業内容を入力してください")
 	}
 	if err := s.edit(func(b *board) error {
-		if b.Dir == "" {
+		if dir == "" {
 			return errors.New("先に dir で作業先を指定してください")
 		}
 		if err := rule.setTiming(kind, when, time.Now()); err != nil {
 			return err
 		}
 		b.NextID++
-		rule.ID, rule.Dir = b.NextID, b.Dir
+		rule.ID, rule.Dir = b.NextID, dir
 		b.Schedules = append(b.Schedules, rule)
 		return nil
 	}); err != nil {

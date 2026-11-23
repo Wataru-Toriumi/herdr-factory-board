@@ -57,11 +57,11 @@ func TestDailyRegistrationFirstRun(t *testing.T) {
 
 func TestIntervalScheduleAcrossTicks(t *testing.T) {
 	s := store{t.TempDir()}
-	if err := setWorkDir(s, s.dir); err != nil {
+	if err := registerProject(s, s.dir); err != nil {
 		t.Fatal(err)
 	}
 	before := time.Now()
-	if _, err := command(s, "true", "every 15m 差分を確認する"); err != nil {
+	if _, err := command(s, "true", s.dir, "every 15m 差分を確認する"); err != nil {
 		t.Fatal(err)
 	}
 	b, err := s.read()
@@ -102,11 +102,11 @@ func TestIntervalScheduleAcrossTicks(t *testing.T) {
 
 func TestIntervalCommandRejectsInvalidInput(t *testing.T) {
 	s := store{t.TempDir()}
-	if err := setWorkDir(s, s.dir); err != nil {
+	if err := registerProject(s, s.dir); err != nil {
 		t.Fatal(err)
 	}
 	for _, args := range []string{"0m 確認", "-1m 確認", "30s 確認", "1m30s 確認", "15 確認", "15m"} {
-		if _, err := command(s, "true", "every "+args); err == nil {
+		if _, err := command(s, "true", s.dir, "every "+args); err == nil {
 			t.Errorf("無効な入力が受理されました: %q", args)
 		}
 	}

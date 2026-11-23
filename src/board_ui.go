@@ -66,7 +66,9 @@ type boardUI struct {
 	header, context, hint, notice, detail *tview.TextView
 	input                                 *tview.InputField
 	footer                                *tview.Pages
-	workDir                               string
+	workDir, inputDir                     string
+	projects                              []string
+	taskProjectNames                      map[string]string
 	editingScheduleID                     int
 	detailScheduleID                      int
 	detailBody                            string
@@ -170,6 +172,7 @@ func (u *boardUI) activePage() string {
 
 func (u *boardUI) switchView() {
 	u.editingScheduleID = 0
+	u.inputDir = ""
 	u.detailScheduleID = 0
 	u.detailBody = ""
 	u.detailCard = nil
@@ -183,13 +186,14 @@ func (u *boardUI) switchView() {
 	case automationTab:
 		u.pages.SwitchToPage("automation")
 		u.app.SetFocus(u.schedules)
-		u.hint.SetText("n 毎日  i 間隔  t 変更  p 作業先  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
+		u.hint.SetText("n 毎日  i 間隔  t 変更  p プロジェクト  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ")
 	default:
 		u.pages.SwitchToPage("tasks")
 		u.app.SetFocus(u.lists[u.lane])
-		u.hint.SetText("v 詳細  n 追加  p 作業先  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる")
+		u.hint.SetText("v 詳細  n 追加  p プロジェクト  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる")
 	}
 	u.updateHeader()
+	u.showWorkDir()
 }
 
 func (u *boardUI) updateHeader() {
@@ -211,8 +215,8 @@ func (u *boardUI) refresh() {
 		return
 	}
 	active, err := schedulerRunning(u.store)
-	u.workDir = b.Dir
-	u.schedules.render(b.Schedules, active, err)
+	u.projects = b.projectDirs()
+	u.schedules.render(b.Schedules, u.workDir, active, err)
 	if u.activePage() == "detail" {
 		if u.detailCard != nil {
 			if c, err := b.find(u.detailCard.ID); err == nil && *c != *u.detailCard {
@@ -254,9 +258,13 @@ func (u *boardUI) showWorkDir() {
 	if u.activePage() == "directory" {
 		return
 	}
-	if u.workDir == "" {
-		u.context.SetText("p で作業先を選択")
+	if u.inputDir != "" {
+		u.context.SetText("登録先: " + u.inputDir)
+	} else if u.tab == agentTab {
+		u.context.SetText("セッション内のエージェント")
+	} else if u.workDir == "" {
+		u.context.SetText("プロジェクト: すべて   p で選択")
 	} else {
-		u.context.SetText("作業先: " + u.workDir)
+		u.context.SetText("プロジェクト: " + u.workDir)
 	}
 }
