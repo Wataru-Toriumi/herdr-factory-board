@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -17,48 +16,12 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
-func Start(s store.Store, herdrBin string, id int) error {
-	return launchCard(s, herdrBin, id, func(c *board.Card) error {
-		if c.Status != board.Todo && c.Status != board.Failed {
-			return fmt.Errorf("#%d は %s です", id, c.Status)
-		}
-		return nil
-	})
-}
-
-func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card) error) error {
-	var attempt int
-	err := s.EditCard(id, func(c *board.Card) error {
-		if err := prepare(c); err != nil {
-			return err
-		}
-		attempt = c.QueueAttempt()
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	launchErr := herdr.OpenPlugin(herdrBin, "worker", fmt.Sprintf("FACTORY_CARD=%d", id), fmt.Sprintf("FACTORY_ATTEMPT=%d", attempt))
-	if launchErr == nil {
-		return nil
-	}
-	saveErr := s.EditCard(id, func(c *board.Card) error {
-		c.FailAttemptLaunch(attempt, launchErr.Error())
-		return nil
-	})
-	return errors.Join(launchErr, saveErr)
-}
-
 func workerLockName(id int) string {
 	return fmt.Sprintf("worker-%d.lock", id)
 }
 
 func Run(s store.Store) error {
-	id, err := strconv.Atoi(os.Getenv("FACTORY_CARD"))
-	if err != nil {
-		return errors.New("ボードから実行してください")
-	}
-	attempt, err := strconv.Atoi(os.Getenv("FACTORY_ATTEMPT"))
+	id, attempt, err := readLaunchRequest()
 	if err != nil {
 		return err
 	}
