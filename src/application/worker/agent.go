@@ -12,19 +12,26 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 )
 
-func runAgent(ctx context.Context, task board.Card, resultPath string) (string, string) {
+func runAgent(ctx context.Context, task board.Card, lock *os.File, resultPath string) (string, string) {
 	switch task.Agent {
 	case "", board.Codex:
-		return runCodex(ctx, task, resultPath)
+		return runCodex(ctx, task, lock, resultPath)
 	case board.Claude:
-		return runClaude(ctx, task)
+		return runClaude(ctx, task, lock)
 	default:
 		return board.Failed, fmt.Sprintf("未対応の担当エージェントです: %s", task.Agent)
 	}
 }
 
-func agentCommand(ctx context.Context, task board.Card, bin string, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, bin, args...)
+func agentCommand(ctx context.Context, task board.Card, lock *os.File, bin string, args ...string) *exec.Cmd {
+	// 待機するシェルにも同じロックを保持させ、ワーカーが強制終了しても
+	// エージェントの終了までは復旧を許可しない。CLI やその子にはロックを渡さない。
+	path, lookupErr := exec.LookPath(bin)
+	cmd := exec.CommandContext(ctx, "/bin/sh", append([]string{"-c", `"$@" 3>&-; exit $?`, "factory-board", path}, args...)...)
+	if lookupErr != nil {
+		cmd.Err = lookupErr
+	}
+	cmd.ExtraFiles = []*os.File{lock}
 	// エージェントが起動したコマンドも一緒に止められるよう、専用のプロセスグループで実行する。
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error {
