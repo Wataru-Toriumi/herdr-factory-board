@@ -49,16 +49,6 @@ func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card
 	return errors.Join(launchErr, saveErr)
 }
 
-func Cancel(s store.Store, seen board.Card) error {
-	return s.EditCard(seen.ID, func(c *board.Card) error {
-		if *c != seen || !c.CanCancel() {
-			return errors.New("カードが更新されました。最新の状態を確認してください")
-		}
-		c.Status = board.Canceled
-		return nil
-	})
-}
-
 func Run(s store.Store) error {
 	id, err := strconv.Atoi(os.Getenv("FACTORY_CARD"))
 	if err != nil {

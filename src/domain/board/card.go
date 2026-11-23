@@ -39,6 +39,14 @@ func (c Card) CanCancel() bool {
 	return false
 }
 
+func (c *Card) Cancel() bool {
+	if !c.CanCancel() {
+		return false
+	}
+	c.Status = Canceled
+	return true
+}
+
 func (c Card) SourceScheduleID() int {
 	if c.ScheduleID != 0 {
 		return c.ScheduleID

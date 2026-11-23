@@ -22,6 +22,14 @@ func (c Card) CanReviewResult() bool {
 	return c.manual() && c.Phase == ImplementationPhase && c.Status == AwaitingResultReview
 }
 
+func (c *Card) ApproveResult() bool {
+	if !c.CanReviewResult() {
+		return false
+	}
+	c.Status = Done
+	return true
+}
+
 // PreparePhase は起動前にフェーズを検証し、差し戻しなら次の実行に渡すレビュー内容を記録する。
 func (c *Card) PreparePhase(phase, feedback string) error {
 	switch phase {
