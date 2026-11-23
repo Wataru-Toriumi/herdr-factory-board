@@ -2,11 +2,32 @@ package main
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/rivo/tview"
 )
+
+func registerProject(s store, path string) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("作業先の絶対パスを指定してください")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return errors.New("作業先はディレクトリを指定してください")
+	}
+	path = filepath.Clean(path)
+	return s.edit(func(b *board) error {
+		if !slices.Contains(b.Projects, path) {
+			b.Projects = append(b.Projects, path)
+		}
+		return nil
+	})
+}
 
 // 旧版の作業先と履歴もプロジェクトとして扱う。カードや予定の書き換えは不要。
 func (b board) projectDirs() []string {
@@ -98,6 +119,17 @@ func (u *boardUI) pickCardProject(seen card) {
 			u.notice.SetText(err.Error())
 		}
 	})
+}
+
+func (u *boardUI) selectScheduleProject(selected func(string)) {
+	switch {
+	case u.workDir != "":
+		selected(u.workDir)
+	case len(u.projects) == 1:
+		selected(u.projects[0])
+	default:
+		u.pickProject(u.workDir, false, selected)
+	}
 }
 
 func (u *boardUI) editForProject(line, dir string) {

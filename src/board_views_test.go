@@ -143,7 +143,7 @@ func TestScheduleSelectionAfterAnotherPaneRemovesRule(t *testing.T) {
 	u.refresh()
 	u.key(tcell.NewEventKey(tcell.KeyBacktab, 0, 0))
 	u.schedules.SetCurrentItem(1)
-	if _, err := command(s, "true", s.dir, "remove 1"); err != nil {
+	if _, err := parseCommand("remove 1").run(s, "true", s.dir); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
@@ -215,7 +215,7 @@ func TestEditIntervalFromAutomationTab(t *testing.T) {
 		t.Fatal("入力エラーを修正できません")
 	}
 	// 編集中に先頭の予定が消えても、保存対象は同じ番号の予定。
-	if _, err := command(s, "true", s.dir, "remove 1"); err != nil {
+	if _, err := parseCommand("remove 1").run(s, "true", s.dir); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
@@ -284,7 +284,7 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	if text := u.detail.GetText(false); u.activePage() != "detail" || !strings.Contains(text, "#4") || !strings.Contains(text, "15分おき") {
 		t.Fatalf("取り消し後のタスク詳細: %s", text)
 	}
-	if _, err := command(s, "true", s.dir, "remove 2"); err != nil {
+	if _, err := parseCommand("remove 2").run(s, "true", s.dir); err != nil {
 		t.Fatal(err)
 	}
 	u.refresh()
