@@ -2,16 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
-	"github.com/rivo/tview"
 )
 
 type scheduleList struct {
-	*tview.List
-	allRules     []schedule.Rule
-	visibleRules []schedule.Rule
+	rowList[schedule.Rule]
+	allRules []schedule.Rule
 }
 
 func (l *scheduleList) byID(id int) (schedule.Rule, bool) {
@@ -20,14 +17,6 @@ func (l *scheduleList) byID(id int) (schedule.Rule, bool) {
 		return schedule.Rule{}, false
 	}
 	return l.allRules[i], true
-}
-
-func (l *scheduleList) selected() (schedule.Rule, bool) {
-	i := l.GetCurrentItem()
-	if i < 0 || i >= len(l.visibleRules) {
-		return schedule.Rule{}, false
-	}
-	return l.visibleRules[i], true
 }
 
 func (l *scheduleList) render(allRules []schedule.Rule, dir string, active bool, err error) {
@@ -48,21 +37,9 @@ func (l *scheduleList) render(allRules []schedule.Rule, dir string, active bool,
 		state = "稼働中"
 	}
 	l.SetTitle(fmt.Sprintf(" 定期実行 %d件 · %s ", len(visibleRules), state))
-	if reflect.DeepEqual(l.visibleRules, visibleRules) {
-		return
-	}
+	l.setRows(visibleRules, func(a, b schedule.Rule) bool { return a.ID == b.ID }, scheduleRowLabels)
+}
 
-	selected, _ := l.selected()
-	index := l.GetCurrentItem()
-	l.Clear()
-	for i, r := range visibleRules {
-		l.AddItem(tview.Escape(fmt.Sprintf("%s  %s", r.Frequency(), r.Prompt)), tview.Escape(fmt.Sprintf("#%d  %s", r.ID, r.Dir)), 0, nil)
-		if r.ID == selected.ID {
-			index = i
-		}
-	}
-	if len(visibleRules) > 0 {
-		l.SetCurrentItem(min(max(0, index), len(visibleRules)-1))
-	}
-	l.visibleRules = visibleRules
+func scheduleRowLabels(r schedule.Rule) (string, string) {
+	return fmt.Sprintf("%s  %s", r.Frequency(), r.Prompt), fmt.Sprintf("#%d  %s", r.ID, r.Dir)
 }

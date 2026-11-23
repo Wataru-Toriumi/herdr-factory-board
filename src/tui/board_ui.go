@@ -8,6 +8,7 @@ import (
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/gdamore/tcell/v2"
@@ -106,8 +107,8 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 		hint:      tview.NewTextView().SetWrap(false),
 		input:     tview.NewInputField().SetLabel("> "),
 		footer:    tview.NewPages(),
-		agents:    &agentList{List: boardList()},
-		schedules: &scheduleList{List: boardList()},
+		agents:    &agentList{rowList: newRowList[agentRow]()},
+		schedules: &scheduleList{rowList: newRowList[schedule.Rule]()},
 		cards:     make([][]board.Card, len(laneNames)),
 	}
 	for _, color := range laneColors {
