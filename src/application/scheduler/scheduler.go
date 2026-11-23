@@ -47,9 +47,9 @@ func tryAcquireSchedulerLock(s store.Store) (*os.File, error) {
 	return lock, err
 }
 
-func Register(s store.Store, herdrBin, dir, kind, arg string) error {
+func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 	when, prompt, _ := strings.Cut(arg, " ")
-	rule := schedule.Rule{Prompt: strings.TrimSpace(prompt)}
+	rule := schedule.Rule{Agent: agent, Prompt: strings.TrimSpace(prompt)}
 	if rule.Prompt == "" {
 		return errors.New("作業内容を入力してください")
 	}
@@ -144,4 +144,18 @@ func Run(s store.Store, herdrBin string) error {
 		}
 		<-ticker.C
 	}
+}
+
+func ChangeAgent(s store.Store, id int, seen, agent string) error {
+	return s.Edit(func(b *board.State) error {
+		i := schedule.IndexByID(b.Schedules, id)
+		if i < 0 {
+			return fmt.Errorf("定期実行 #%d がありません", id)
+		}
+		if b.Schedules[i].Agent != seen {
+			return errors.New("予定の担当が更新されました。最新の状態を確認してください")
+		}
+		b.Schedules[i].Agent = agent
+		return nil
+	})
 }

@@ -15,6 +15,7 @@ func TestWorkerRecordsCodexOutcome(t *testing.T) {
 	}{
 		{"no final message", "exit 0", board.Done, "終了コード 0（最終メッセージなし）"},
 		{"interrupted", "exit 130", board.Canceled, ""},
+		{"SIGINT with final message", "echo ' partial result ' > \"$3\"\nkill -INT $$", board.Canceled, "partial result"},
 		{"failure with final message", "echo ' partial result ' > \"$3\"\nexit 7", board.Failed, "partial result\nexit status 7"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

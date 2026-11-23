@@ -42,7 +42,7 @@ func boardAgents(panes []herdr.Pane, spaces []herdr.Workspace, cards []board.Car
 		if linked {
 			row.cardID, row.task = c.ID, fmt.Sprintf("#%d %s", c.ID, c.Prompt)
 			if row.name == "" {
-				row.name = "Codex"
+				row.name = board.AgentLabel(c.Agent)
 			}
 			if row.status == "" || row.status == "unknown" {
 				row.status = "working"

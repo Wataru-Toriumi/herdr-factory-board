@@ -2,7 +2,7 @@ id = "wataru-toriumi.factory-board"
 name = "Factory Board"
 version = "0.1.0"
 min_herdr_version = "0.7.0"
-description = "Run manual and scheduled Codex tasks from a workspace board."
+description = "Run manual and scheduled Codex or Claude Code tasks from a workspace board."
 platforms = ["macos", "linux"]
 
 [[build]]

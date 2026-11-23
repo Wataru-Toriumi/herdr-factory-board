@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
@@ -9,7 +10,7 @@ import (
 
 func (u *boardUI) renderCardDetail(c board.Card) {
 	u.detailCard = &c
-	body := fmt.Sprintf("#%d  %s\n作業先: %s\n%s", c.ID, c.Status, c.Dir, c.Prompt)
+	body := fmt.Sprintf("#%d  %s\n担当: %s\n作業先: %s\n%s", c.ID, c.Status, board.AgentLabel(c.Agent), c.Dir, c.Prompt)
 	if phase := c.PhaseLabel(); phase != "" {
 		body += "\n\n" + phase
 	}
@@ -54,7 +55,8 @@ func (u *boardUI) cardShortcuts() []cardShortcut {
 	if c.CanCancel() {
 		shortcuts = append(shortcuts, cardShortcut{'x', "キャンセル", u.cancelDetailCard})
 	}
-	if c.CanChangeProject() {
+	if c.CanConfigure() {
+		shortcuts = append(shortcuts, cardShortcut{'g', "担当を変更", func() { u.changeCardAgent(*c) }})
 		shortcuts = append(shortcuts, cardShortcut{'p', "作業先を変更", func() { u.pickCardProject(*c) }})
 	}
 	switch {
@@ -141,4 +143,21 @@ func (u *boardUI) finishDetailAction(err error) {
 	if err != nil {
 		u.notice.SetText(err.Error())
 	}
+}
+
+func nextAgent(current string) string {
+	if current == board.Claude {
+		return board.Codex
+	}
+	return board.Claude
+}
+
+func (u *boardUI) changeCardAgent(seen board.Card) {
+	u.finishDetailAction(u.store.EditCard(seen.ID, func(c *board.Card) error {
+		if *c != seen || !c.CanConfigure() {
+			return errors.New("カードが更新されました。最新の状態を確認してください")
+		}
+		c.Agent = nextAgent(seen.Agent)
+		return nil
+	}))
 }
