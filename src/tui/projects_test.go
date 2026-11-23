@@ -12,6 +12,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -57,10 +58,10 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 		t.Fatalf("選択肢に %q がありません", name)
 	}
 
-	if !slices.Equal(left.projects, []string{api, web}) || left.lists[todoLane].GetItemCount() != 2 {
+	if !slices.Equal(left.projects, []string{api, web}) || left.lists[taskboard.Todo].GetItemCount() != 2 {
 		t.Fatal("旧版のボードからプロジェクトを復元できません")
 	}
-	_, label := left.lists[todoLane].GetItemText(1)
+	_, label := left.lists[taskboard.Todo].GetItemText(1)
 	if !strings.Contains(label, "web") {
 		t.Fatalf("全体表示のカードにプロジェクト名がありません: %s", label)
 	}
@@ -73,15 +74,15 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	right.execute("dir " + web)
 	left.refresh()
 	press(left, tcell.KeyEnter)
-	if left.workDir != api || left.lists[todoLane].GetItemCount() != 1 || left.schedules.GetItemCount() != 0 {
+	if left.workDir != api || left.lists[taskboard.Todo].GetItemCount() != 1 || left.schedules.GetItemCount() != 0 {
 		t.Fatal("APIのカードと予定に絞り込まれていません")
 	}
 	right.refresh()
-	if right.lists[todoLane].GetItemCount() != 2 || right.schedules.GetItemCount() != 1 {
+	if right.lists[taskboard.Todo].GetItemCount() != 2 || right.schedules.GetItemCount() != 1 {
 		t.Fatal("Webのカードと予定に絞り込まれていません")
 	}
 
-	right.lists[todoLane].SetCurrentItem(1)
+	right.lists[taskboard.Todo].SetCurrentItem(1)
 	key(right, 'v')
 	key(right, 'p')
 	press(right, tcell.KeyEscape)
@@ -90,7 +91,7 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	}
 	key(right, 'p')
 	choose(right, "api")
-	if right.activePage() != "detail" || right.detailCard.Dir != api || right.workDir != web || right.lists[todoLane].GetItemCount() != 1 {
+	if right.activePage() != "detail" || right.detailCard.Dir != api || right.workDir != web || right.lists[taskboard.Todo].GetItemCount() != 1 {
 		t.Fatal("チケットの作業先変更が反映されません")
 	}
 	press(right, tcell.KeyEscape)
@@ -152,9 +153,9 @@ func TestRegisteredAndHistoricalProjects(t *testing.T) {
 	}
 	b.Cards = []board.Card{{Dir: "/backend/api"}}
 	b.Schedules = []schedule.Rule{{Dir: "/frontend/api"}}
-	names := projectNames(b.ProjectDirs())
-	if names["/backend/api"] != "/backend/api" || names["/frontend/api"] != "/frontend/api" {
-		t.Fatalf("同名のプロジェクトを区別できません: %v", names)
+	dirs := b.ProjectDirs()
+	if !slices.Contains(dirs, "/backend/api") || !slices.Contains(dirs, "/frontend/api") {
+		t.Fatalf("履歴のプロジェクト一覧 = %v", dirs)
 	}
 }
 

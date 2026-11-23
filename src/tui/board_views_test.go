@@ -9,6 +9,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -33,7 +34,7 @@ func TestTaskLabelsRefreshWhenOnlyProjectNamesChange(t *testing.T) {
 	u.projects = []string{"/backend/api"}
 	cards := []board.Card{{ID: 1, Status: board.Todo, Dir: u.projects[0]}}
 	u.renderTasks(cards)
-	list := u.lists[todoLane]
+	list := u.lists[taskboard.Todo]
 	if _, label := list.GetItemText(0); label != "#1  api" {
 		t.Fatalf("登録時の表示 = %q", label)
 	}
@@ -58,18 +59,18 @@ func TestCompactBoardFollowsLaneSelection(t *testing.T) {
 		}
 	}
 	u.key(tcell.NewEventKey(tcell.KeyLeft, 0, 0))
-	check(failedOrCanceledLane)
+	check(taskboard.FailedOrCanceled)
 	u.key(tcell.NewEventKey(tcell.KeyRight, 0, 0))
-	check(todoLane)
+	check(taskboard.Todo)
 	cards[0].Status = board.Running
 	u.renderTasks(cards)
-	check(workLane)
+	check(taskboard.Work)
 }
 
 func TestFailedAndCanceledCardsShareLane(t *testing.T) {
 	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
 	u.renderTasks([]board.Card{{ID: 1, Status: board.Failed, Source: "定期 #3"}, {ID: 2, Status: board.Canceled}})
-	list := u.lists[failedOrCanceledLane]
+	list := u.lists[taskboard.FailedOrCanceled]
 	if list.GetItemCount() != 2 {
 		t.Fatalf("失敗・中止のカード数 = %d", list.GetItemCount())
 	}
@@ -111,7 +112,7 @@ func TestRefreshPreservesActiveView(t *testing.T) {
 				t.Fatal("カードの列移動で操作中の画面からフォーカスが外れました")
 			}
 			u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
-			if u.app.GetFocus() != u.lists[workLane] {
+			if u.app.GetFocus() != u.lists[taskboard.Work] {
 				t.Fatal("Esc で進行中のカードに戻れませんでした")
 			}
 		})
@@ -316,7 +317,7 @@ func TestTimingFromTaskDetail(t *testing.T) {
 		t.Fatalf("保存後のタスク詳細: %s", text)
 	}
 	press(tcell.KeyEscape)
-	for i := todoLane; i < workLane; i++ {
+	for i := taskboard.Todo; i < taskboard.Work; i++ {
 		press(tcell.KeyRight)
 	}
 	key('v')
@@ -424,7 +425,7 @@ func TestTabNavigationRestoresPageHintAndFocus(t *testing.T) {
 	}{
 		{tcell.KeyTab, "agents", "エージェント", "Enter ペインへ", u.agents},
 		{tcell.KeyTab, "automation", "自動化", "i 間隔", u.schedules},
-		{tcell.KeyTab, "tasks", "タスク", "v 詳細", u.lists[designLane]},
+		{tcell.KeyTab, "tasks", "タスク", "v 詳細", u.lists[taskboard.Design]},
 		{tcell.KeyBacktab, "automation", "自動化", "i 間隔", u.schedules},
 	} {
 		u.key(tcell.NewEventKey(tc.key, 0, 0))
@@ -458,7 +459,7 @@ func TestTaskLaneTitlesAndSelectionColors(t *testing.T) {
 		}
 		u.key(tcell.NewEventKey(tcell.KeyRight, 0, 0))
 	}
-	if u.lane != todoLane {
+	if u.lane != taskboard.Todo {
 		t.Fatal("最後の列から未着手に戻れませんでした")
 	}
 }

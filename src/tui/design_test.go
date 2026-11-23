@@ -10,6 +10,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -65,7 +66,7 @@ printf '%s' "$ANSWER" > "$result"
 	press := func(k tcell.Key) { u.key(tcell.NewEventKey(k, 0, 0)) }
 	key('v')
 	key('d')
-	if c := u.detailCard; u.lane != designLane || c.Status != board.Starting || c.Phase != board.DesignPhase {
+	if c := u.detailCard; u.lane != taskboard.Design || c.Status != board.Starting || c.Phase != board.DesignPhase {
 		t.Fatalf("設計開始: %+v", c)
 	}
 	if prompt := run(1, "design", "設計案A"); !strings.Contains(prompt, "検索を追加") {
@@ -73,7 +74,7 @@ printf '%s' "$ANSWER" > "$result"
 	}
 	u.refresh()
 	first := *u.detailCard
-	if u.lane != designCompleteLane || !first.CanReviewDesign() || first.Design != "設計案A" || first.Attempt != 1 || !strings.Contains(u.hint.GetText(false), "承認") {
+	if u.lane != taskboard.DesignComplete || !first.CanReviewDesign() || first.Design != "設計案A" || first.Attempt != 1 || !strings.Contains(u.hint.GetText(false), "承認") {
 		t.Fatalf("設計レビュー: %+v", first)
 	}
 	if err := worker.Start(s, "true", 1); err == nil {
@@ -91,7 +92,7 @@ printf '%s' "$ANSWER" > "$result"
 	key('r')
 	u.input.SetText("索引を使う")
 	press(tcell.KeyEnter)
-	if u.lane != designLane || u.detailCard.Status != board.Starting {
+	if u.lane != taskboard.Design || u.detailCard.Status != board.Starting {
 		t.Fatalf("再設計開始: %+v", u.detailCard)
 	}
 	prompt := run(2, "design", "設計案B")
@@ -107,7 +108,7 @@ printf '%s' "$ANSWER" > "$result"
 	// ボードを開き直しても、同じカードの最新版を承認できる。
 	u = newBoardUI(s, "true")
 	u.refresh()
-	for i := todoLane; i < designCompleteLane; i++ {
+	for i := taskboard.Todo; i < taskboard.DesignComplete; i++ {
 		press(tcell.KeyRight)
 	}
 	press(tcell.KeyEnter)
@@ -115,7 +116,7 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatalf("再設計結果: %+v", c)
 	}
 	key('a')
-	if u.detailCard.Status != board.Starting || cardLane(*u.detailCard) != workLane {
+	if u.detailCard.Status != board.Starting || taskboard.LaneFor(*u.detailCard) != taskboard.Work {
 		t.Fatalf("実装開始時の列: %+v", u.detailCard)
 	}
 	key('a')
@@ -124,7 +125,7 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal(prompt)
 	}
 	u.refresh()
-	if c := u.detailCard; c.Status != board.AwaitingResultReview || cardLane(*c) != reviewLane || !strings.Contains(u.hint.GetText(false), "承認して完了") {
+	if c := u.detailCard; c.Status != board.AwaitingResultReview || taskboard.LaneFor(*c) != taskboard.Review || !strings.Contains(u.hint.GetText(false), "承認して完了") {
 		t.Fatalf("実装結果のレビュー: %+v", c)
 	}
 	review := *u.detailCard
@@ -133,7 +134,7 @@ printf '%s' "$ANSWER" > "$result"
 	}
 	u = newBoardUI(s, "true")
 	u.refresh()
-	for i := 0; i < reviewLane; i++ {
+	for i := 0; i < taskboard.Review; i++ {
 		press(tcell.KeyRight)
 	}
 	press(tcell.KeyEnter)
@@ -141,7 +142,7 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal("レビュー中のカードで結果を確認できません")
 	}
 	key('a')
-	if u.lane != doneLane {
+	if u.lane != taskboard.Done {
 		t.Fatal("承認後に完了列へ移動しませんでした")
 	}
 	if err := worker.ApproveResult(s, review); err == nil {
@@ -152,7 +153,7 @@ printf '%s' "$ANSWER" > "$result"
 	}
 
 	key('u')
-	if c := u.detailCard; u.lane != reviewLane || c.Result != review.Result || c.Attempt != review.Attempt {
+	if c := u.detailCard; u.lane != taskboard.Review || c.Result != review.Result || c.Attempt != review.Attempt {
 		t.Fatalf("承認取り消し後: %+v", c)
 	}
 	if err := worker.ApproveResult(s, review); err == nil {
@@ -170,7 +171,7 @@ printf '%s' "$ANSWER" > "$result"
 	key('r')
 	u.input.SetText("結果が空の場合も検証して")
 	press(tcell.KeyEnter)
-	if u.lane != workLane || u.detailCard.Status != board.Starting {
+	if u.lane != taskboard.Work || u.detailCard.Status != board.Starting {
 		t.Fatalf("実装差し戻し後: %+v", u.detailCard)
 	}
 	prompt = run(4, "implementation", "空の検索結果も検証済み")
@@ -180,11 +181,11 @@ printf '%s' "$ANSWER" > "$result"
 		}
 	}
 	u.refresh()
-	if u.lane != reviewLane || u.detailCard.Result != "空の検索結果も検証済み" {
+	if u.lane != taskboard.Review || u.detailCard.Result != "空の検索結果も検証済み" {
 		t.Fatalf("修正後のレビュー: %+v", u.detailCard)
 	}
 	key('a')
-	if u.lane != doneLane {
+	if u.lane != taskboard.Done {
 		t.Fatal("修正後の結果を承認できません")
 	}
 }
