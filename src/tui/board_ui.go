@@ -13,49 +13,14 @@ import (
 	"github.com/rivo/tview"
 )
 
-const (
-	todoLane = iota
-	designLane
-	designCompleteLane
-	workLane
-	reviewLane
-	doneLane
-	failedOrCanceledLane
-)
-
-var laneNames = [...]string{"未着手", "設計中", "設計完了", "進行中", "レビュー中", "完了", "失敗・中止"}
-var laneColors = [...]tcell.Color{tcell.ColorLightSkyBlue, tcell.ColorPlum, tcell.ColorLavender, tcell.ColorGold, tcell.ColorLightCyan, tcell.ColorLightGreen, tcell.ColorLightCoral}
-
-func cardLane(c board.Card) int {
-	switch c.Status {
-	case board.Todo:
-		return todoLane
-	case board.AwaitingDesignReview:
-		return designCompleteLane
-	case board.Starting, board.Running:
-		if c.Phase == board.DesignPhase {
-			return designLane
-		}
-		return workLane
-	case board.AwaitingResultReview:
-		return reviewLane
-	case board.Done:
-		return doneLane
-	case board.Failed, board.Canceled:
-		return failedOrCanceledLane
-	default:
-		return -1
-	}
-}
-
 type boardUI struct {
 	app                                   *tview.Application
 	store                                 store.Store
 	herdr                                 string
 	pages                                 *tview.Pages
 	columns                               *tview.Flex
-	lists                                 []*tview.List
-	cards                                 [][]board.Card
+	lists                                 [len(taskLanes)]*tview.List
+	cards                                 [len(taskLanes)][]board.Card
 	agents                                *agentList
 	schedules                             *scheduleList
 	header, context, hint, notice, detail *tview.TextView
@@ -99,12 +64,10 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 		footer:    tview.NewPages(),
 		agents:    &agentList{rowList: newRowList[agentRow]()},
 		schedules: &scheduleList{rowList: newRowList[schedule.Rule]()},
-		cards:     make([][]board.Card, len(laneNames)),
 	}
-	for _, color := range laneColors {
-		l := boardList()
-		l.SetTitleColor(color)
-		u.lists = append(u.lists, l)
+	for i, lane := range taskLanes {
+		u.lists[i] = boardList()
+		u.lists[i].SetTitleColor(lane.color)
 	}
 	u.layoutColumns()
 	u.agents.SetTitle(" エージェント ").SetTitleAlign(tview.AlignLeft)
@@ -118,7 +81,7 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 	u.app.SetRoot(root, true).SetInputCapture(u.key)
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		width, _ := screen.Size()
-		if narrow := width < 17*len(laneNames); narrow != u.compact {
+		if narrow := width < 17*len(taskLanes); narrow != u.compact {
 			u.compact = narrow
 			u.layoutColumns()
 		}

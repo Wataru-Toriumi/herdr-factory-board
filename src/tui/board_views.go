@@ -39,7 +39,7 @@ func (u *boardUI) renderTasks(cards []board.Card) {
 	}
 	labelsChanged := !maps.Equal(names, u.taskProjectNames)
 	u.taskProjectNames = names
-	groups := make([][]board.Card, len(laneNames))
+	var groups [len(taskLanes)][]board.Card
 	for _, c := range cards {
 		if u.workDir != "" && c.Dir != u.workDir {
 			continue
@@ -67,7 +67,7 @@ func (u *boardUI) renderTasks(cards []board.Card) {
 			}
 			u.cards[i] = group
 		}
-		list.SetTitle(fmt.Sprintf(" %s %d ", laneNames[i], len(group)))
+		list.SetTitle(fmt.Sprintf(" %s %d ", taskLanes[i].name, len(group)))
 	}
 	u.selectLane(selectedLane)
 }
@@ -84,7 +84,7 @@ func (u *boardUI) selectLane(lane int) {
 	for i, list := range u.lists {
 		border := tcell.ColorDarkSlateGray
 		if i == u.lane {
-			border = laneColors[i]
+			border = taskLanes[i].color
 		}
 		list.SetBorderColor(border)
 	}
