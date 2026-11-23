@@ -58,7 +58,7 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 		t.Fatalf("選択肢に %q がありません", name)
 	}
 
-	if !slices.Equal(left.projects, []string{api, web}) || len(left.cards[todoLane]) != 2 {
+	if !slices.Equal(left.projects, []string{api, web}) || left.lists[todoLane].GetItemCount() != 2 {
 		t.Fatal("旧版のボードからプロジェクトを復元できません")
 	}
 	_, label := left.lists[todoLane].GetItemText(1)
@@ -74,11 +74,11 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	right.execute("dir " + web)
 	left.refresh()
 	press(left, tcell.KeyEnter)
-	if left.workDir != api || len(left.cards[todoLane]) != 1 || left.schedules.GetItemCount() != 0 {
+	if left.workDir != api || left.lists[todoLane].GetItemCount() != 1 || left.schedules.GetItemCount() != 0 {
 		t.Fatal("APIのカードと予定に絞り込まれていません")
 	}
 	right.refresh()
-	if len(right.cards[todoLane]) != 2 || right.schedules.GetItemCount() != 1 {
+	if right.lists[todoLane].GetItemCount() != 2 || right.schedules.GetItemCount() != 1 {
 		t.Fatal("Webのカードと予定に絞り込まれていません")
 	}
 
@@ -91,7 +91,7 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	}
 	key(right, 'p')
 	choose(right, "api")
-	if right.activePage() != "detail" || right.detailCard.Dir != api || right.workDir != web || len(right.cards[todoLane]) != 1 {
+	if right.activePage() != "detail" || right.detailCard.Dir != api || right.workDir != web || right.lists[todoLane].GetItemCount() != 1 {
 		t.Fatal("チケットの作業先変更が反映されません")
 	}
 	press(right, tcell.KeyEscape)

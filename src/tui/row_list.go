@@ -11,8 +11,8 @@ type rowList[T any] struct {
 	rows []T
 }
 
-func newRowList[T any]() rowList[T] {
-	return rowList[T]{List: boardList()}
+func newRowList[T any]() *rowList[T] {
+	return &rowList[T]{List: boardList()}
 }
 
 func (l *rowList[T]) selected() (T, bool) {
@@ -29,18 +29,26 @@ func (l *rowList[T]) setRows(rows []T, sameItem func(T, T) bool, labels func(T) 
 	if reflect.DeepEqual(l.rows, rows) {
 		return
 	}
-	index := l.GetCurrentItem()
 	selected, _ := l.selected()
+	l.replaceRows(rows, func(row T) bool { return sameItem(row, selected) }, labels)
+}
+
+// 指定の項目を選択できたかを返す。見つからなければ元の行番号を使う。
+func (l *rowList[T]) replaceRows(rows []T, matches func(T) bool, labels func(T) (string, string)) bool {
+	index := l.GetCurrentItem()
+	found := false
 	l.Clear()
 	for i, row := range rows {
 		title, subtitle := labels(row)
 		l.AddItem(tview.Escape(title), tview.Escape(subtitle), 0, nil)
-		if sameItem(row, selected) {
+		if matches(row) {
 			index = i
+			found = true
 		}
 	}
 	if len(rows) > 0 {
 		l.SetCurrentItem(min(max(index, 0), len(rows)-1))
 	}
 	l.rows = rows
+	return found
 }

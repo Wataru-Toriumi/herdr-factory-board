@@ -19,8 +19,7 @@ type boardUI struct {
 	herdr                                 string
 	pages                                 *tview.Pages
 	columns                               *tview.Flex
-	lists                                 [len(taskLanes)]*tview.List
-	cards                                 [len(taskLanes)][]board.Card
+	lists                                 [len(taskLanes)]*rowList[board.Card]
 	agents                                *agentList
 	schedules                             *scheduleList
 	header, context, hint, notice, detail *tview.TextView
@@ -66,7 +65,7 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 		schedules: &scheduleList{rowList: newRowList[schedule.Rule]()},
 	}
 	for i, lane := range taskLanes {
-		u.lists[i] = boardList()
+		u.lists[i] = newRowList[board.Card]()
 		u.lists[i].SetTitleColor(lane.color)
 	}
 	u.layoutColumns()
@@ -163,12 +162,7 @@ func (u *boardUI) refresh() {
 }
 
 func (u *boardUI) selectedCard() (board.Card, bool) {
-	i := u.lists[u.lane].GetCurrentItem()
-	group := u.cards[u.lane]
-	if i < 0 || i >= len(group) {
-		return board.Card{}, false
-	}
-	return group[i], true
+	return u.lists[u.lane].selected()
 }
 
 func (u *boardUI) showWorkDir() {

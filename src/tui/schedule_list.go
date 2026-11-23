@@ -7,7 +7,7 @@ import (
 )
 
 type scheduleList struct {
-	rowList[schedule.Rule]
+	*rowList[schedule.Rule]
 	allRules []schedule.Rule
 }
 

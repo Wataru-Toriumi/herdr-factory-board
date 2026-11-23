@@ -3,7 +3,7 @@ package tui
 import "fmt"
 
 type agentList struct {
-	rowList[agentRow]
+	*rowList[agentRow]
 }
 
 func (l *agentList) blockedCount() int {
