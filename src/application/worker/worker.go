@@ -49,6 +49,10 @@ func launchCard(s store.Store, herdrBin string, id int, prepare func(*board.Card
 	return errors.Join(launchErr, saveErr)
 }
 
+func workerLockName(id int) string {
+	return fmt.Sprintf("worker-%d.lock", id)
+}
+
 func Run(s store.Store) error {
 	id, err := strconv.Atoi(os.Getenv("FACTORY_CARD"))
 	if err != nil {
@@ -58,7 +62,7 @@ func Run(s store.Store) error {
 	if err != nil {
 		return err
 	}
-	lock, err := s.Lock(fmt.Sprintf("worker-%d.lock", id), false)
+	lock, err := s.Lock(workerLockName(id), false)
 	if err != nil {
 		return err
 	}
@@ -114,7 +118,7 @@ func watchCardCancellation(ctx context.Context, cancel context.CancelFunc, s sto
 // ワーカーは実行中、カードごとのロックを保持する。
 // 終了状態を記録する前に異常終了してもロックは解放されるため、カードを復旧できる。
 func Recover(s store.Store, id int) error {
-	l, err := s.Lock(fmt.Sprintf("worker-%d.lock", id), true)
+	l, err := s.Lock(workerLockName(id), true)
 	if errors.Is(err, syscall.EWOULDBLOCK) {
 		return errors.New("担当ペインは実行中です")
 	}
@@ -122,13 +126,7 @@ func Recover(s store.Store, id int) error {
 		return err
 	}
 	defer l.Close()
-	return s.EditCard(id, func(c *board.Card) error {
-		if c.Status != board.Starting && c.Status != board.Running {
-			return errors.New("中断した実行だけを復旧できます")
-		}
-		c.Status, c.Result = board.Failed, "中断した実行を手動で復旧しました"
-		return nil
-	})
+	return s.EditCard(id, (*board.Card).RecoverInterruptedAttempt)
 }
 
 func Focus(s store.Store, bin string, id int) error {
