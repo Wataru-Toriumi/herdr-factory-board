@@ -19,8 +19,8 @@ type Workspace struct {
 	AgentStatus string `json:"agent_status"`
 }
 
-func list(bin, resource string, response any) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func list(ctx context.Context, bin, resource string, response any) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	out, err := exec.CommandContext(ctx, bin, resource, "list").Output()
 	if ctx.Err() != nil {
@@ -33,12 +33,16 @@ func list(bin, resource string, response any) error {
 }
 
 func ListWorkspaces(bin string) ([]Workspace, error) {
+	return ListWorkspacesContext(context.Background(), bin)
+}
+
+func ListWorkspacesContext(ctx context.Context, bin string) ([]Workspace, error) {
 	var response struct {
 		Result struct {
 			Workspaces []Workspace `json:"workspaces"`
 		} `json:"result"`
 	}
-	if err := list(bin, "workspace", &response); err != nil {
+	if err := list(ctx, bin, "workspace", &response); err != nil {
 		return nil, err
 	}
 	workspaces := response.Result.Workspaces
@@ -70,12 +74,16 @@ type Pane struct {
 }
 
 func ListPanes(bin string) ([]Pane, error) {
+	return ListPanesContext(context.Background(), bin)
+}
+
+func ListPanesContext(ctx context.Context, bin string) ([]Pane, error) {
 	var response struct {
 		Result struct {
 			Panes []Pane `json:"panes"`
 		} `json:"result"`
 	}
-	if err := list(bin, "pane", &response); err != nil {
+	if err := list(ctx, bin, "pane", &response); err != nil {
 		return nil, err
 	}
 	if response.Result.Panes == nil {

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,12 +68,12 @@ esac
 	}
 	u := newBoardUI(store.Store{Dir: dir}, bin)
 	t.Setenv("PANE_STATUS", "working")
-	u.refresh()
+	u.applyRefresh(readBoard(u.store), readSession(context.Background(), bin))
 	u.key(tcell.NewEventKey(tcell.KeyTab, 0, 0))
 	u.agents.SetCurrentItem(1)
 
 	t.Setenv("PANE_STATUS", "blocked")
-	u.refresh()
+	u.applyRefresh(readBoard(u.store), readSession(context.Background(), bin))
 	if u.agents.GetCurrentItem() != 0 || !strings.Contains(u.header.GetText(false), "入力待ち 1件") {
 		t.Fatalf("更新後の選択行とヘッダー: %d, %s", u.agents.GetCurrentItem(), u.header.GetText(false))
 	}
