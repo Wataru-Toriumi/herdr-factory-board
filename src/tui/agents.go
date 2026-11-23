@@ -22,8 +22,8 @@ func boardAgents(panes []herdr.Pane, spaces []herdr.Workspace, cards []board.Car
 	}
 	workers := make(map[string]board.Card)
 	for _, c := range cards {
-		if c.Status == board.Running && c.Pane != "" {
-			workers[c.Pane] = c
+		if pane := c.RunningPane(); pane != "" {
+			workers[pane] = c
 		}
 	}
 	var rows []agentRow
