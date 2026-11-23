@@ -197,3 +197,18 @@ func TestDesignFailureRequiresNewDesignBeforeApproval(t *testing.T) {
 		t.Fatal("設計として再試行されませんでした")
 	}
 }
+
+func TestIncompleteDesignHasNoReviewShortcuts(t *testing.T) {
+	u := newBoardUI(store{t.TempDir()}, "true")
+	u.read("カードの詳細", "", 0)
+	u.renderCardDetail(card{ID: 1, Status: awaitingReview, Phase: designPhase})
+	if hint := u.hint.GetText(false); strings.Contains(hint, "承認して実装") || strings.Contains(hint, "再設計") {
+		t.Fatalf("設計案が空なのにレビュー操作が表示されました: %s", hint)
+	}
+	for _, key := range []rune{'a', 'r'} {
+		event := tcell.NewEventKey(tcell.KeyRune, key, 0)
+		if u.key(event) != event {
+			t.Fatalf("設計案が空なのに %q を受け付けました", key)
+		}
+	}
+}
