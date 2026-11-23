@@ -36,57 +36,74 @@ func (u *boardUI) renderCardDetail(c board.Card) {
 		return
 	}
 	u.detail.SetText(body)
-	hint := ""
-	if c.CanChangeProject() {
-		hint = "p 作業先を変更   "
-	}
-	for _, shortcut := range u.designShortcuts() {
-		hint += string(shortcut.key) + " " + shortcut.label + "   "
-	}
-	u.setCardHint(hint + "↑↓ スクロール   Esc 戻る")
+	u.setCardHint("↑↓ スクロール   Esc 戻る")
 }
 
-type designShortcut struct {
+type cardShortcut struct {
 	key   rune
 	label string
 	run   func()
 }
 
-func (u *boardUI) designShortcuts() []designShortcut {
+func (u *boardUI) cardShortcuts() []cardShortcut {
 	c := u.detailCard
+	if c == nil {
+		return nil
+	}
+	var shortcuts []cardShortcut
+	if c.CanCancel() {
+		shortcuts = append(shortcuts, cardShortcut{'x', "キャンセル", u.cancelDetailCard})
+	}
+	if c.CanChangeProject() {
+		shortcuts = append(shortcuts, cardShortcut{'p', "作業先を変更", func() { u.pickCardProject(*c) }})
+	}
 	switch {
 	case c.CanStartDesign():
-		return []designShortcut{
-			{'d', "設計から開始", func() { u.launchDetailPhase(board.DesignPhase, "") }},
-		}
+		return append(shortcuts, cardShortcut{'d', "設計から開始", func() { u.launchDetailPhase(board.DesignPhase, "") }})
 	case c.CanReviewResult():
-		return []designShortcut{
-			{'a', "結果を承認して完了", u.approveDetailResult},
-			{'r', "修正を依頼", u.editFeedback},
-		}
+		return append(shortcuts,
+			cardShortcut{'a', "結果を承認して完了", u.approveDetailResult},
+			cardShortcut{'r', "修正を依頼", u.editFeedback},
+		)
 	case c.CanReviewDesign():
-		return []designShortcut{
-			{'a', "承認して実装", func() { u.launchDetailPhase(board.ImplementationPhase, "") }},
-			{'r', "コメントして再設計", u.editFeedback},
-		}
+		return append(shortcuts,
+			cardShortcut{'a', "承認して実装", func() { u.launchDetailPhase(board.ImplementationPhase, "") }},
+			cardShortcut{'r', "コメントして再設計", u.editFeedback},
+		)
 	}
 	switch c.ReopenTarget() {
 	case board.Todo:
-		return []designShortcut{{'u', "未着手に戻す", u.reopenDetail}}
+		return append(shortcuts, cardShortcut{'u', "未着手に戻す", u.reopenDetail})
 	case board.AwaitingResultReview:
-		return []designShortcut{{'u', "承認を取り消す", u.reopenDetail}}
+		return append(shortcuts, cardShortcut{'u', "承認を取り消す", u.reopenDetail})
 	}
-	return nil
+	return shortcuts
 }
 
-func (u *boardUI) designKey(key rune) bool {
-	for _, shortcut := range u.designShortcuts() {
+func (u *boardUI) setCardHint(suffix string) {
+	hint := ""
+	for _, shortcut := range u.cardShortcuts() {
+		hint += string(shortcut.key) + " " + shortcut.label + "   "
+	}
+	u.hint.SetText(hint + suffix)
+}
+
+func (u *boardUI) cardKey(key rune) bool {
+	for _, shortcut := range u.cardShortcuts() {
 		if key == shortcut.key {
 			shortcut.run()
 			return true
 		}
 	}
 	return false
+}
+
+func (u *boardUI) cancelDetailCard() {
+	err := worker.Cancel(u.store, *u.detailCard)
+	u.refresh()
+	if err != nil {
+		u.notice.SetText(err.Error())
+	}
 }
 
 func (u *boardUI) approveDetailResult() {

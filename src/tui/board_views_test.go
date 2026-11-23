@@ -317,6 +317,13 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	if u.activePage() != "detail" || !strings.Contains(u.detail.GetText(false), "解除済み") {
 		t.Fatal("解除済みの予定が編集対象になりました")
 	}
+	if hint := u.hint.GetText(false); !strings.Contains(hint, "x キャンセル") || strings.Contains(hint, "t 定期実行の設定変更") {
+		t.Fatalf("予定解除後の実行中カードの操作案内: %s", hint)
+	}
+	key('x')
+	if u.detailCard.Status != board.Canceled || strings.Contains(u.hint.GetText(false), "x キャンセル") {
+		t.Fatal("予定解除後のカードにキャンセルが反映されませんでした")
+	}
 	u.execute("result 5")
 	key('t')
 	if u.activePage() != "detail" || strings.Contains(u.hint.GetText(false), "設定変更") {
