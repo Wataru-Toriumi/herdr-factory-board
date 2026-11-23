@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/worker"
 )
 
 func run() error {

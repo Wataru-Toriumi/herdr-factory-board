@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
 func TestIntervalScheduleAcrossTicks(t *testing.T) {

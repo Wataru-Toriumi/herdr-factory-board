@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 )
 
 type Store struct{ Dir string }

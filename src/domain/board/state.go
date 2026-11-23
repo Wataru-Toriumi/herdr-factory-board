@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 )
 
 type State struct {

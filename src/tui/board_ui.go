@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/herdr"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/scheduler"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/store"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
