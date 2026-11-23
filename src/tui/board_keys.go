@@ -7,7 +7,6 @@ import (
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/command"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/gdamore/tcell/v2"
@@ -39,13 +38,6 @@ func (u *boardUI) updateDetailTiming() {
 		u.detail.SetText(text)
 	}
 	u.setCardHint(hint)
-}
-
-func (u *boardUI) setCardHint(hint string) {
-	if u.detailCard != nil && u.detailCard.CanCancel() {
-		hint = "x キャンセル   " + hint
-	}
-	u.hint.SetText(hint)
 }
 
 func (u *boardUI) closeTimingEditor() {
@@ -233,19 +225,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	case "detail":
-		if key == tcell.KeyRune && event.Rune() == 'p' && u.detailCard != nil && u.detailCard.CanChangeProject() {
-			u.pickCardProject(*u.detailCard)
-			return nil
-		}
-		if key == tcell.KeyRune && event.Rune() == 'x' && u.detailCard != nil && u.detailCard.CanCancel() {
-			err := worker.Cancel(u.store, *u.detailCard)
-			u.refresh()
-			if err != nil {
-				u.notice.SetText(err.Error())
-			}
-			return nil
-		}
-		if key == tcell.KeyRune && u.detailCard != nil && u.designKey(event.Rune()) {
+		if key == tcell.KeyRune && u.cardKey(event.Rune()) {
 			return nil
 		}
 		if key == tcell.KeyRune && event.Rune() == 't' {
