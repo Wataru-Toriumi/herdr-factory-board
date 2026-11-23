@@ -81,23 +81,6 @@ func (u *boardUI) reopenDetail() {
 	u.finishDetailAction(worker.Reopen(u.store, *u.detailCard))
 }
 
-func (u *boardUI) editFeedback() {
-	u.edit("")
-	if u.detailCard.CanReviewResult() {
-		u.input.SetLabel("実装の修正内容 > ")
-	} else {
-		u.input.SetLabel("再設計のコメント > ")
-	}
-	u.editingFeedback = true
-}
-
-func (u *boardUI) closeFeedbackEditor() {
-	u.editingFeedback = false
-	u.notice.SetText("")
-	u.footer.SwitchToPage("keys")
-	u.app.SetFocus(u.detail)
-}
-
 func (u *boardUI) launchDetailPhase(phase, feedback string) {
 	u.finishDetailAction(worker.StartPhase(u.store, u.herdr, *u.detailCard, phase, feedback))
 }

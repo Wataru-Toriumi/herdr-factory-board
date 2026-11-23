@@ -12,18 +12,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func (u *boardUI) closeTimingEditor() {
-	u.editingScheduleID = 0
-	u.notice.SetText("")
-	if page, _ := u.pages.GetFrontPage(); page == "detail" {
-		u.footer.SwitchToPage("keys")
-		u.renderDetail()
-		u.app.SetFocus(u.detail)
-		return
-	}
-	u.switchView()
-}
-
 func (u *boardUI) help() {
 	var text strings.Builder
 	fmt.Fprintln(&text, "タスクを選んで v で詳細を表示。Enter で開始・担当ペインへ移動・結果表示。")
@@ -46,57 +34,6 @@ func (u *boardUI) help() {
 		fmt.Fprintf(&text, "%s  %s\n", label, w.AgentStatus)
 	}
 	u.openDetail("操作方法", text.String(), 0, nil)
-}
-
-func (u *boardUI) edit(initial string) {
-	u.input.SetLabel("> ")
-	switch initial {
-	case "daily ":
-		u.input.SetLabel("時刻 HH:MM と作業内容 > ")
-	case "every ":
-		u.input.SetLabel("間隔（例 15m）と作業内容 > ")
-	}
-	u.input.SetText(initial)
-	u.footer.SwitchToPage("input")
-	u.app.SetFocus(u.input)
-}
-
-func (u *boardUI) editScheduleTiming(r schedule.Rule) {
-	value, label := r.Time, "時刻（HH:MM）"
-	if r.TimingKind() == schedule.Every {
-		value, label = fmt.Sprintf("%dm", r.Interval.Minutes), "間隔（例 15m）"
-	}
-	u.edit(value)
-	u.input.SetLabel(fmt.Sprintf("#%d %s > ", r.ID, label))
-	u.editingScheduleID = r.ID
-	u.notice.SetText("")
-}
-
-func (u *boardUI) submitInput() {
-	value := u.input.GetText()
-	if u.editingFeedback {
-		if strings.TrimSpace(value) == "" {
-			u.notice.SetText("修正内容を入力してください")
-			return
-		}
-		u.closeFeedbackEditor()
-		u.launchDetailPhase(u.detailCard.Phase, value)
-		return
-	}
-	if u.editingScheduleID == 0 {
-		dir := u.inputDir
-		cmd := command.Parse(value)
-		cmd.Agent = u.inputAgent
-		u.switchView()
-		u.executeAt(cmd, dir)
-		return
-	}
-	if err := scheduler.UpdateTiming(u.store, u.editingScheduleID, value); err != nil {
-		u.notice.SetText(err.Error())
-		return
-	}
-	u.closeTimingEditor()
-	u.refresh()
 }
 
 func (u *boardUI) composeSchedule(prefix string) {
@@ -181,29 +118,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	case "input":
-		switch key {
-		case tcell.KeyCtrlG:
-			if u.inputDir != "" {
-				u.inputAgent = nextAgent(u.inputAgent)
-				u.showWorkDir()
-				return nil
-			}
-			return event
-		case tcell.KeyEscape:
-			if u.editingFeedback {
-				u.closeFeedbackEditor()
-				u.refresh()
-			} else if u.editingScheduleID != 0 {
-				u.closeTimingEditor()
-			} else {
-				u.switchView()
-			}
-			return nil
-		case tcell.KeyEnter:
-			u.submitInput()
-			return nil
-		}
-		return event
+		return u.inputKey(event)
 	case "detail":
 		if key == tcell.KeyRune && u.cardKey(event.Rune()) {
 			return nil
@@ -261,7 +176,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 				return nil
 			case 'x':
 				if r, ok := u.schedules.selected(); ok {
-					u.edit(fmt.Sprintf("remove %d", r.ID))
+					u.editCommand(fmt.Sprintf("remove %d", r.ID))
 				}
 				return nil
 			}
@@ -277,7 +192,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			if u.tab == automationTab {
 				u.composeSchedule("every ")
 			} else {
-				u.edit("i")
+				u.editCommand("i")
 			}
 		case 'p':
 			u.pickProject(u.workDir, true, func(dir string) {
@@ -287,11 +202,11 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		case 'q', 'Q':
 			u.app.Stop()
 		case ':':
-			u.edit("")
+			u.editCommand("")
 		case '?':
 			u.help()
 		default:
-			u.edit(string(event.Rune()))
+			u.editCommand(string(event.Rune()))
 		}
 	default:
 		return event

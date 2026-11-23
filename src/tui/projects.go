@@ -73,9 +73,3 @@ func (u *boardUI) selectScheduleProject(selected func(string)) {
 		u.pickProject(u.workDir, false, selected)
 	}
 }
-
-func (u *boardUI) editForProject(line, dir string) {
-	u.edit(line)
-	u.inputDir = dir
-	u.showWorkDir()
-}

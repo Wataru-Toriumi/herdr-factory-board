@@ -281,3 +281,32 @@ func TestReopenedCardCanStartFresh(t *testing.T) {
 		t.Fatalf("直接実行の開始時に以前の状態が残りました: %+v", c)
 	}
 }
+
+func TestFeedbackEditorKeepsReviewedDesignDuringRefresh(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		c := b.NewCard("設計を確認", s.Dir, "")
+		c.Phase, c.Status, c.Design = board.DesignPhase, board.AwaitingDesignReview, "最初の設計案"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.execute("result 1")
+	u.key(tcell.NewEventKey(tcell.KeyRune, 'r', 0))
+	u.input.SetText("条件を追記")
+	if err := s.EditCard(1, func(c *board.Card) error {
+		c.Design = "別ペインの設計案"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u.refresh()
+	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	if u.activePage() != "detail" || u.app.GetFocus() != u.detail || !strings.Contains(u.notice.GetText(false), "カードが更新") {
+		t.Fatalf("古い設計案への送信後: %s, %s", u.activePage(), u.notice.GetText(false))
+	}
+	if c := u.detailCard; c.Design != "別ペインの設計案" || c.Status != board.AwaitingDesignReview || c.Feedback != "" {
+		t.Fatalf("最新のカード: %+v", c)
+	}
+}
