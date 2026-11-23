@@ -3,11 +3,10 @@ package tui
 import (
 	"fmt"
 	"maps"
-	"reflect"
+	"slices"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 )
 
 func cardListLabel(c board.Card, lane int, project string) string {
@@ -49,23 +48,17 @@ func (u *boardUI) renderTasks(cards []board.Card) {
 		}
 	}
 	selected, _ := u.selectedCard()
+	isSelected := func(c board.Card) bool { return c.ID == selected.ID }
 	selectedLane := u.lane
 	for i, group := range groups {
 		list := u.lists[i]
-		if labelsChanged || !reflect.DeepEqual(u.cards[i], group) {
-			index := list.GetCurrentItem()
-			list.Clear()
-			for j, c := range group {
-				list.AddItem(tview.Escape(c.Prompt), tview.Escape(cardListLabel(c, i, names[c.Dir])), 0, nil)
-				if selected.ID == c.ID {
-					index = j
-					selectedLane = i
-				}
+		if labelsChanged || !slices.Equal(list.rows, group) {
+			found := list.replaceRows(group, isSelected, func(c board.Card) (string, string) {
+				return c.Prompt, cardListLabel(c, i, names[c.Dir])
+			})
+			if found {
+				selectedLane = i
 			}
-			if len(group) > 0 {
-				list.SetCurrentItem(min(max(0, index), len(group)-1))
-			}
-			u.cards[i] = group
 		}
 		list.SetTitle(fmt.Sprintf(" %s %d ", taskLanes[i].name, len(group)))
 	}

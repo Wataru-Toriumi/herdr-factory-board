@@ -28,6 +28,23 @@ func TestCardSelectionFollowsWorkerAcrossColumns(t *testing.T) {
 	}
 }
 
+func TestTaskLabelsRefreshWhenOnlyProjectNamesChange(t *testing.T) {
+	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
+	u.projects = []string{"/backend/api"}
+	cards := []board.Card{{ID: 1, Status: board.Todo, Dir: u.projects[0]}}
+	u.renderTasks(cards)
+	list := u.lists[todoLane]
+	if _, label := list.GetItemText(0); label != "#1  api" {
+		t.Fatalf("登録時の表示 = %q", label)
+	}
+
+	u.projects = append(u.projects, "/frontend/api")
+	u.renderTasks(cards)
+	if _, label := list.GetItemText(0); label != "#1  /backend/api" {
+		t.Fatalf("同名プロジェクト追加後の表示 = %q", label)
+	}
+}
+
 func TestCompactBoardFollowsLaneSelection(t *testing.T) {
 	u := newBoardUI(store.Store{Dir: t.TempDir()}, "")
 	u.compact = true
