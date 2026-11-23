@@ -105,18 +105,7 @@ func Run(s store.Store) error {
 	go watchCardCancellation(ctx, cancel, s, task)
 	status, result := runCodex(ctx, task, resultPath)
 	return s.EditCard(id, func(c *board.Card) error {
-		if c.Attempt != attempt || c.Status != board.Running {
-			return nil
-		}
-		c.Status, c.Result = status, result
-		if status == board.Done {
-			switch task.Phase {
-			case board.DesignPhase:
-				c.Design, c.Status, c.Result = result, board.AwaitingDesignReview, ""
-			case board.ImplementationPhase:
-				c.Status = board.AwaitingResultReview
-			}
-		}
+		c.FinishAttempt(task.Attempt, task.Phase, status, result)
 		return nil
 	})
 }
@@ -135,7 +124,7 @@ func watchCardCancellation(ctx context.Context, cancel context.CancelFunc, s sto
 				continue
 			}
 			c, err := b.FindCard(task.ID)
-			if err == nil && (c.Attempt != task.Attempt || c.Status != board.Running) {
+			if err == nil && !c.IsRunningAttempt(task.Attempt) {
 				cancel()
 				return
 			}
