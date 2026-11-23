@@ -90,7 +90,7 @@ func (u *boardUI) edit(initial string) {
 
 func (u *boardUI) editScheduleTiming(r schedule.Rule) {
 	value, label := r.Time, "時刻（HH:MM）"
-	if r.Interval != nil {
+	if r.TimingKind() == schedule.Every {
 		value, label = fmt.Sprintf("%dm", r.Interval.Minutes), "間隔（例 15m）"
 	}
 	u.edit(value)
@@ -143,7 +143,7 @@ func (u *boardUI) executeAt(line, dir string) {
 				u.pickProject(u.workDir, false, run)
 				return
 			}
-		case "daily", "every":
+		case schedule.Daily, schedule.Every:
 			u.selectScheduleProject(run)
 			return
 		}

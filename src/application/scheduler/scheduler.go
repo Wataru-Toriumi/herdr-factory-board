@@ -77,11 +77,7 @@ func UpdateTiming(s store.Store, id int, value string) error {
 			return fmt.Errorf("定期実行 #%d がありません", id)
 		}
 		r := &b.Schedules[i]
-		kind := "daily"
-		if r.Interval != nil {
-			kind = "every"
-		}
-		return r.SetTiming(kind, strings.TrimSpace(value), time.Now())
+		return r.SetTiming(r.TimingKind(), strings.TrimSpace(value), time.Now())
 	})
 }
 
