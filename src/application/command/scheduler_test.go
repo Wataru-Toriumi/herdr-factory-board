@@ -8,6 +8,30 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
+func TestCardsAndSchedulesShareIDs(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	for _, line := range []string{"add 手動タスク", "every 15m 定期タスク"} {
+		if _, err := Parse(line).Run(s, "true", s.Dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := scheduler.RunDue(s, "true", time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	b, err := s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Cards) != 2 || len(b.Schedules) != 1 {
+		t.Fatalf("保存されたカードと予定の件数 = %d, %d", len(b.Cards), len(b.Schedules))
+	}
+	manual, rule, history := b.Cards[0], b.Schedules[0], b.Cards[1]
+	if manual.ID != 1 || rule.ID != 2 || history.ID != 3 || b.NextID != 3 || history.ScheduleID != rule.ID {
+		t.Fatalf("手動カード #%d、予定 #%d、履歴カード #%d（予定 #%d）、採番済み %d",
+			manual.ID, rule.ID, history.ID, history.ScheduleID, b.NextID)
+	}
+}
+
 func TestIntervalScheduleAcrossTicks(t *testing.T) {
 	s := store.Store{Dir: t.TempDir()}
 	if err := s.RegisterProject(s.Dir); err != nil {
@@ -64,7 +88,7 @@ func TestIntervalCommandRejectsInvalidInput(t *testing.T) {
 		}
 	}
 	b, err := s.Read()
-	if err != nil || len(b.Schedules) != 0 {
-		t.Fatalf("入力エラー後の予定: %+v, %v", b.Schedules, err)
+	if err != nil || len(b.Schedules) != 0 || b.NextID != 0 {
+		t.Fatalf("入力エラー後の予定 = %+v, 採番済み = %d, エラー = %v", b.Schedules, b.NextID, err)
 	}
 }

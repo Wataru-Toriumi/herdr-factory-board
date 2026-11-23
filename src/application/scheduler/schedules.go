@@ -13,7 +13,7 @@ import (
 
 func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 	when, prompt, _ := strings.Cut(arg, " ")
-	rule := schedule.Rule{Agent: agent, Prompt: strings.TrimSpace(prompt)}
+	rule := schedule.Rule{Agent: agent, Prompt: strings.TrimSpace(prompt), Dir: dir}
 	if rule.Prompt == "" {
 		return errors.New("作業内容を入力してください")
 	}
@@ -24,9 +24,7 @@ func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 		if err := rule.SetTiming(kind, when, time.Now()); err != nil {
 			return err
 		}
-		b.NextID++
-		rule.ID, rule.Dir = b.NextID, dir
-		b.Schedules = append(b.Schedules, rule)
+		b.AddSchedule(rule)
 		return nil
 	}); err != nil {
 		return err

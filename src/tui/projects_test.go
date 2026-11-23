@@ -29,8 +29,7 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 		b.Dir = api
 		b.NewCard("APIタスク", api, "")
 		b.NewCard("Webタスク", web, "")
-		b.NextID++
-		b.Schedules = []schedule.Rule{{ID: b.NextID, Time: "08:00", Dir: web, Prompt: "Web確認"}}
+		b.AddSchedule(schedule.Rule{Time: "08:00", Dir: web, Prompt: "Web確認"})
 		return nil
 	}); err != nil {
 		t.Fatal(err)
