@@ -1,43 +1,9 @@
 package tui
 
 import (
-	"fmt"
-
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 )
-
-func (u *boardUI) renderCardDetail(c board.Card) {
-	u.detailCard = &c
-	body := fmt.Sprintf("#%d  %s\n担当: %s\n作業先: %s\n%s", c.ID, c.Status, board.AgentLabel(c.Agent), c.Dir, c.Prompt)
-	if phase := c.PhaseLabel(); phase != "" {
-		body += "\n\n" + phase
-	}
-	if c.Design != "" {
-		body += "\n\n設計案\n" + c.Design
-	}
-	if c.Feedback != "" {
-		body += "\n\nレビューコメント\n" + c.Feedback
-	}
-	if c.ImplementationFeedback != "" {
-		if c.PreviousResult != "" {
-			body += "\n\n前回の実装結果\n" + c.PreviousResult
-		}
-		body += "\n\n実装の修正依頼\n" + c.ImplementationFeedback
-	}
-	if c.Phase != "" && c.Result != "" {
-		body += "\n\n実行結果\n" + c.Result
-	} else {
-		body += "\n" + c.Result
-	}
-	u.detailBody = body
-	if u.detailScheduleID != 0 {
-		u.updateDetailTiming()
-		return
-	}
-	u.detail.SetText(body)
-	u.setCardHint("↑↓ スクロール   Esc 戻る")
-}
 
 type cardShortcut struct {
 	key   rune

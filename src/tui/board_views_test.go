@@ -344,3 +344,30 @@ func TestTimingFromTaskDetail(t *testing.T) {
 		t.Fatalf("時刻変更後の毎日の予定: %+v", daily)
 	}
 }
+
+func TestDetailRefreshShowsUpdatedCardAndSchedule(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.Schedules = []schedule.Rule{{ID: 1, Time: "08:00"}}
+		b.Cards = []board.Card{{ID: 2, ScheduleID: 1, Status: board.Running, Prompt: "確認"}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u := newBoardUI(s, "true")
+	u.execute("result 2")
+	if err := s.Edit(func(b *board.State) error {
+		b.Schedules[0].Time = "10:30"
+		b.Cards[0].Status, b.Cards[0].Result = board.Done, "確認完了"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	u.refresh()
+	if text := u.detail.GetText(false); !strings.Contains(text, "毎日 10:30") || !strings.Contains(text, "確認完了") {
+		t.Fatalf("更新後の予定と結果: %s", text)
+	}
+	if hint := u.hint.GetText(false); strings.Contains(hint, "x キャンセル") || !strings.Contains(hint, "t 定期実行の設定変更") {
+		t.Fatalf("完了した定期カードの操作案内: %s", hint)
+	}
+}

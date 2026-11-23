@@ -27,7 +27,7 @@ func (u *boardUI) closeDirectory() {
 	u.notice.SetText("")
 	if u.detailCard != nil {
 		u.pages.SwitchToPage("detail")
-		u.renderCardDetail(*u.detailCard)
+		u.renderDetail()
 		u.app.SetFocus(u.detail)
 		u.showWorkDir()
 		return

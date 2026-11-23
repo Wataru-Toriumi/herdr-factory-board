@@ -216,12 +216,7 @@ func (u *boardUI) refresh() {
 	u.projects = b.ProjectDirs()
 	u.schedules.render(b.Schedules, u.workDir, active, err)
 	if u.activePage() == "detail" {
-		if u.detailCard != nil {
-			if c, err := b.FindCard(u.detailCard.ID); err == nil && *c != *u.detailCard {
-				u.renderCardDetail(*c)
-			}
-		}
-		u.updateDetailTiming()
+		u.refreshDetail(b)
 	}
 	u.renderTasks(b.Cards)
 	if err != nil {

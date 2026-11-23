@@ -12,46 +12,12 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func (u *boardUI) read(title, text string, scheduleID int) {
-	u.detailCard = nil
-	u.detailBody, u.detailScheduleID = text, scheduleID
-	u.detail.SetTitle(" " + title + " ")
-	u.detail.SetText(text).ScrollToBeginning()
-	u.pages.SwitchToPage("detail")
-	u.hint.SetText("↑↓ スクロール   Esc 戻る")
-	u.updateDetailTiming()
-	u.app.SetFocus(u.detail)
-}
-
-func (u *boardUI) updateDetailTiming() {
-	if u.detailScheduleID == 0 {
-		return
-	}
-	timing := "解除済み"
-	hint := "↑↓ スクロール   Esc 戻る"
-	if r, ok := u.schedules.byID(u.detailScheduleID); ok {
-		timing = r.Frequency()
-		if u.detailCard == nil {
-			timing += "  担当: " + board.AgentLabel(r.Agent)
-		}
-		hint = "t 定期実行の設定変更   ↑↓ スクロール   Esc 戻る"
-		if u.detailCard == nil {
-			hint = "g 担当を変更   " + hint
-		}
-	}
-	text := fmt.Sprintf("定期実行 #%d  %s\n\n%s", u.detailScheduleID, timing, u.detailBody)
-	if u.detail.GetText(false) != text {
-		u.detail.SetText(text)
-	}
-	u.setCardHint(hint)
-}
-
 func (u *boardUI) closeTimingEditor() {
 	u.editingScheduleID = 0
 	u.notice.SetText("")
 	if page, _ := u.pages.GetFrontPage(); page == "detail" {
 		u.footer.SwitchToPage("keys")
-		u.updateDetailTiming()
+		u.renderDetail()
 		u.app.SetFocus(u.detail)
 		return
 	}
@@ -79,7 +45,7 @@ func (u *boardUI) help() {
 		}
 		fmt.Fprintf(&text, "%s  %s\n", label, w.AgentStatus)
 	}
-	u.read("操作方法", text.String(), 0)
+	u.openDetail("操作方法", text.String(), 0, nil)
 }
 
 func (u *boardUI) edit(initial string) {
@@ -171,8 +137,7 @@ func (u *boardUI) runCommand(cmd command.Command, dir string) {
 	} else if cmd.Name == "add" && u.workDir != "" && dir != u.workDir {
 		u.notice.SetText("チケットを追加しました。作業先: " + dir)
 	} else if c != nil {
-		u.read("カードの詳細", "", c.SourceScheduleID())
-		u.renderCardDetail(*c)
+		u.openCardDetail(*c)
 	}
 }
 
@@ -180,7 +145,7 @@ func (u *boardUI) activate() {
 	switch u.tab {
 	case automationTab:
 		if r, ok := u.schedules.selected(); ok {
-			u.read(fmt.Sprintf("定期実行 #%d", r.ID), fmt.Sprintf("作業先: %s\n\n%s", r.Dir, r.Prompt), r.ID)
+			u.openDetail(fmt.Sprintf("定期実行 #%d", r.ID), fmt.Sprintf("作業先: %s\n\n%s", r.Dir, r.Prompt), r.ID, nil)
 		}
 		return
 	case agentTab:
