@@ -26,6 +26,7 @@ func NewView(execute func(string), focusLane func(tview.Primitive)) *View {
 	for i, lane := range taskLanes {
 		v.lists[i] = widgets.NewRowList[Row]()
 		v.lists[i].SetTitleColor(lane.color)
+		v.lists[i].SetBorderPadding(0, 0, 3, 1)
 	}
 	v.layoutColumns()
 	return v
