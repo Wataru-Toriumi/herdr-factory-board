@@ -1,4 +1,5 @@
-package tui
+// Package terminal は TUI の端末入力を扱う。
+package terminal
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -12,7 +13,8 @@ type pasteScreen struct {
 	initErr          error
 }
 
-func setBoardScreen(app *tview.Application, raw tcell.Screen) error {
+// SetScreen は貼り付け時の改行を正規化するスクリーンを初期化する。
+func SetScreen(app *tview.Application, raw tcell.Screen) error {
 	screen := &pasteScreen{Screen: raw}
 	app.SetScreen(screen)
 	return screen.initErr

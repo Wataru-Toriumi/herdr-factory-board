@@ -1,4 +1,4 @@
-package tui
+package app
 
 import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/command"
