@@ -16,6 +16,20 @@ herdr plugin pane open --plugin wataru-toriumi.factory-board --entrypoint board
 
 起動したら、ボードで作業先を選んで最初のカードを作成します。[ボードの操作](board.md)
 
+## キーバインドでボードを開く
+
+Herdr の設定ファイル（通常は `~/.config/herdr/config.toml`）に次の割り当てを追加します。
+
+```toml
+[[keys.command]]
+key = "prefix+shift+b"
+type = "plugin_action"
+command = "wataru-toriumi.factory-board.open-board"
+description = "Factory Board を開く"
+```
+
+設定を保存し、Herdr のセッション内で `herdr server reload-config` を実行します。既定のプレフィックスなら、**Ctrl+B を押して離し、次に Shift+B** を押すと、現在のペインにボードが開きます。
+
 ## プラグインの登録を解除する
 
 登録を解除するには `herdr plugin unlink wataru-toriumi.factory-board` を実行してください。[Herdr 公式プラグインガイド](https://herdr.dev/tui/docs/plugins/)
