@@ -74,6 +74,30 @@ func ChangeAgent(s store.Store, id int, seen, agent string) error {
 	})
 }
 
+// PromptConflict は編集中に別のペインで保存された実行内容を返す。
+type PromptConflict struct {
+	Current schedule.Rule
+}
+
+func (e *PromptConflict) Error() string {
+	return "別のペインで実行内容が変更されました。最新の内容を確認してください"
+}
+
+func ChangePrompt(s store.Store, seen schedule.Rule, value string) error {
+	return editSchedule(s, seen.ID, func(b *board.State, i int) error {
+		r := &b.Schedules[i]
+		if r.Prompt != seen.Prompt {
+			return &PromptConflict{Current: *r}
+		}
+		prompt := strings.TrimSpace(value)
+		if prompt == "" {
+			return errors.New("実行内容を入力してください")
+		}
+		r.Prompt = prompt
+		return nil
+	})
+}
+
 func Remove(s store.Store, id int) error {
 	return editSchedule(s, id, func(b *board.State, i int) error {
 		b.Schedules = append(b.Schedules[:i], b.Schedules[i+1:]...)

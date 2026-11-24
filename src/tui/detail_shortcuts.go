@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/detail"
 )
 
@@ -36,12 +37,18 @@ func (u *boardUI) runDetailAction(action detail.Action) {
 	case detail.ReopenCard:
 		u.reopenDetail()
 	case detail.ChangeScheduleAgent:
-		if r, ok := u.schedules.model.ByID(u.detailScheduleID); ok {
+		u.withDetailSchedule(func(r schedule.Rule) {
 			u.finishDetailAction(scheduler.ChangeAgent(u.store, r.ID, r.Agent, nextAgent(r.Agent)))
-		}
+		})
 	case detail.EditTiming:
-		if r, ok := u.schedules.model.ByID(u.detailScheduleID); ok {
-			u.editScheduleTiming(r)
-		}
+		u.withDetailSchedule(u.editScheduleTiming)
+	case detail.EditSchedulePrompt:
+		u.withDetailSchedule(u.editSchedulePrompt)
+	}
+}
+
+func (u *boardUI) withDetailSchedule(action func(schedule.Rule)) {
+	if r, ok := u.schedules.model.ByID(u.detailScheduleID); ok {
+		action(r)
 	}
 }
