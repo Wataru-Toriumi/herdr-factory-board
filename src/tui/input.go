@@ -95,22 +95,40 @@ func (u *boardUI) editScheduleTiming(r schedule.Rule) {
 	if r.TimingKind() == schedule.Every {
 		label = "間隔（例 15m）"
 	}
-	u.openInput(fmt.Sprintf("#%d %s > ", r.ID, label), r.TimingValue(), func(value string) {
-		if err := scheduler.ChangeTiming(u.store, r, value); err != nil {
-			var conflict *scheduler.TimingConflict
-			if errors.As(err, &conflict) {
-				u.editScheduleTiming(conflict.Current)
-			}
+	u.openScheduleEditor(r.ID, label, r.TimingValue(), func(value string) error {
+		err := scheduler.ChangeTiming(u.store, r, value)
+		var conflict *scheduler.TimingConflict
+		if errors.As(err, &conflict) {
+			u.editScheduleTiming(conflict.Current)
+		}
+		return err
+	})
+}
+
+func (u *boardUI) editSchedulePrompt(r schedule.Rule) {
+	u.openScheduleEditor(r.ID, "実行内容", r.Prompt, func(value string) error {
+		err := scheduler.ChangePrompt(u.store, r, value)
+		var conflict *scheduler.PromptConflict
+		if errors.As(err, &conflict) {
+			u.editSchedulePrompt(conflict.Current)
+		}
+		return err
+	})
+}
+
+func (u *boardUI) openScheduleEditor(id int, label, initial string, save func(string) error) {
+	u.openInput(fmt.Sprintf("#%d %s > ", id, label), initial, func(value string) {
+		if err := save(value); err != nil {
 			u.notice.SetText(err.Error())
 			return
 		}
-		u.closeTimingEditor()
+		u.closeScheduleEditor()
 		u.refresh()
-	}, u.closeTimingEditor)
+	}, u.closeScheduleEditor)
 	u.notice.SetText("")
 }
 
-func (u *boardUI) closeTimingEditor() {
+func (u *boardUI) closeScheduleEditor() {
 	u.editor = inputSession{}
 	u.notice.SetText("")
 	if page, _ := u.pages.GetFrontPage(); page == "detail" {

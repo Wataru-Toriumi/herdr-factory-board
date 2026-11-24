@@ -24,6 +24,7 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
 	fmt.Fprintln(&text, "scheduler / remove 定期番号")
 	fmt.Fprintln(&text, "自動化タブでは n で毎日、i で間隔指定（例: every 15m 作業内容）。t で時刻・間隔の変更、Enter で詳細、x で解除。")
+	fmt.Fprintln(&text, "定期実行の詳細では e で実行内容を編集します。変更は次に作成されるカードから反映されます。")
 	fmt.Fprintln(&text, "\nワークスペース")
 	for _, w := range u.spaces {
 		label := w.Label
@@ -81,7 +82,7 @@ func (u *boardUI) activate() {
 	switch u.tab {
 	case automationTab:
 		if r, ok := u.schedules.selected(); ok {
-			u.openDetail(fmt.Sprintf("定期実行 #%d", r.ID), fmt.Sprintf("作業先: %s\n\n%s", r.Dir, r.Prompt), r.ID, nil)
+			u.openDetail(fmt.Sprintf("定期実行 #%d", r.ID), "", r.ID, nil)
 		}
 		return
 	case agentTab:

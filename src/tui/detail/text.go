@@ -8,6 +8,10 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 )
 
+func RuleBody(r schedule.Rule) string {
+	return fmt.Sprintf("作業先: %s\n\n%s", r.Dir, r.Prompt)
+}
+
 func ScheduleText(body string, id int, rule *schedule.Rule, showAgent bool) string {
 	timing := "解除済み"
 	if rule != nil {
