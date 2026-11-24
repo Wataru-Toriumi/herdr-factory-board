@@ -2,6 +2,7 @@ package tui
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/rivo/tview"
 )
@@ -43,6 +44,9 @@ func (l *rowList[T]) replaceRows(rows []T, index int, labels func(T) (string, st
 	l.Clear()
 	for _, row := range rows {
 		title, subtitle := labels(row)
+		if first, _, multiline := strings.Cut(title, "\n"); multiline {
+			title = strings.TrimSuffix(first, "\r") + " …"
+		}
 		l.AddItem(tview.Escape(title), tview.Escape(subtitle), 0, nil)
 	}
 	if len(rows) > 0 {

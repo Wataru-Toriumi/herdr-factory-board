@@ -20,11 +20,11 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "一覧の p で表示を絞り込みます。n でタスクごとの作業先を選択。未着手の手動タスクは詳細の p で作業先を変更できます。")
 	fmt.Fprintln(&text, "新規タスク・予定の入力中は Ctrl+G、未着手の手動カード・予定の詳細では g で担当を切り替えます。")
 	fmt.Fprintln(&text, "コマンドはそのまま入力し、Enter で確定。Esc でキャンセル。")
-	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容")
+	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容 / every 15m 作業内容")
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
 	fmt.Fprintln(&text, "scheduler / remove 定期番号")
-	fmt.Fprintln(&text, "自動化タブでは n で毎日、i で間隔指定（例: every 15m 作業内容）。t で時刻・間隔の変更、Enter で詳細、x で解除。")
-	fmt.Fprintln(&text, "定期実行の詳細では e で実行内容を編集します。変更は次に作成されるカードから反映されます。")
+	fmt.Fprintln(&text, "自動化タブでは n で毎日、i で間隔指定の登録フォームを開きます。t で時刻・間隔の変更、Enter で詳細、x で解除。")
+	fmt.Fprintln(&text, "定期実行の詳細では e で設定を編集。実行内容は Enter で改行、Ctrl+S で保存します。変更は次に作成されるカードから反映されます。")
 	fmt.Fprintln(&text, "\nワークスペース")
 	for _, w := range u.spaces {
 		label := w.Label
@@ -34,10 +34,6 @@ func (u *boardUI) help() {
 		fmt.Fprintf(&text, "%s  %s\n", label, w.AgentStatus)
 	}
 	u.openDetail("操作方法", text.String(), 0, nil)
-}
-
-func (u *boardUI) composeSchedule(prefix string) {
-	u.selectScheduleProject(func(dir string) { u.editForProject(prefix, dir) })
 }
 
 func (u *boardUI) execute(line string) {
@@ -117,6 +113,8 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		return event
+	case "schedule-form":
+		return u.scheduleFormKey(event)
 	case "input":
 		return u.inputKey(event)
 	case "detail":
@@ -172,13 +170,13 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'n':
 			if u.tab == automationTab {
-				u.composeSchedule("daily ")
+				u.newScheduleForm(schedule.Daily)
 			} else {
 				u.pickProject(u.workDir, false, func(dir string) { u.editForProject("add ", dir) })
 			}
 		case 'i':
 			if u.tab == automationTab {
-				u.composeSchedule("every ")
+				u.newScheduleForm(schedule.Every)
 			} else {
 				u.editCommand("i")
 			}

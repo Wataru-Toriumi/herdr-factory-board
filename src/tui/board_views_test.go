@@ -133,11 +133,12 @@ func TestAutomationTabManagesDailySchedule(t *testing.T) {
 		t.Fatal("初回の登録で作業先を選択できません")
 	}
 	picker.InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
-	if u.activePage() != "input" || u.input.GetText() != "daily " {
+	if u.activePage() != "schedule-form" || u.scheduleForm.kind != schedule.Daily {
 		t.Fatal("作業先の選択後に定期実行を入力できません")
 	}
-	u.input.SetText("daily 09:00 テスト")
-	press(tcell.KeyEnter)
+	u.scheduleForm.timing.SetText("09:00")
+	u.scheduleForm.prompt.SetText("テスト", true)
+	press(tcell.KeyCtrlS)
 	b, err := s.Read()
 	if err != nil {
 		t.Fatal(err)
@@ -208,11 +209,12 @@ func TestAutomationTabIntervalShortcut(t *testing.T) {
 	u.refresh()
 	u.key(tcell.NewEventKey(tcell.KeyBacktab, 0, 0))
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
-	if u.input.GetText() != "every " || u.activePage() != "input" {
+	if u.activePage() != "schedule-form" || u.scheduleForm.kind != schedule.Every {
 		t.Fatal("間隔指定の入力を開始できません")
 	}
-	u.input.SetText(u.input.GetText() + "5m 変更を確認する")
-	u.key(tcell.NewEventKey(tcell.KeyEnter, 0, 0))
+	u.scheduleForm.timing.SetText("5m")
+	u.scheduleForm.prompt.SetText("変更を確認する", true)
+	u.key(tcell.NewEventKey(tcell.KeyCtrlS, 0, 0))
 	if u.schedules.GetItemCount() != 1 {
 		t.Fatal("登録した予定が表示されません")
 	}

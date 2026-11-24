@@ -172,3 +172,30 @@ func TestDailyOccurrenceAndRetry(t *testing.T) {
 		t.Fatalf("retry or catch-up failed: %+v, %v", b, err)
 	}
 }
+
+func TestChangeSettingsSavesFieldsTogether(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	seen := schedule.Rule{ID: 7, Time: "09:00", Prompt: "前の内容", Dir: s.Dir}
+	if err := s.Edit(func(b *board.State) error {
+		b.Schedules = []schedule.Rule{seen}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ChangeSettings(s, seen, "25:00", "新しい内容", board.Claude); err == nil {
+		t.Fatal("不正な時刻が受理されました")
+	}
+	b, err := s.Read()
+	if err != nil || len(b.Schedules) != 1 || b.Schedules[0] != seen {
+		t.Fatalf("入力エラー後の予定 = %+v, %v", b.Schedules, err)
+	}
+
+	if _, err := ChangeSettings(s, seen, "10:30", "調べる\n報告する", board.Claude); err != nil {
+		t.Fatal(err)
+	}
+	current, err := ChangeSettings(s, seen, "12:00", "別の編集", board.Codex)
+	if err == nil || current == nil || current.Time != "10:30" || current.Prompt != "調べる\n報告する" || current.Agent != board.Claude {
+		t.Fatalf("競合時の最新設定 = %+v, %v", current, err)
+	}
+}

@@ -101,8 +101,9 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	press(left, tcell.KeyBacktab)
 	key(left, 'i')
 	choose(left, "api")
-	left.input.SetText("every 15m API確認")
-	press(left, tcell.KeyEnter)
+	left.scheduleForm.timing.SetText("15m")
+	left.scheduleForm.prompt.SetText("API確認", true)
+	press(left, tcell.KeyCtrlS)
 	if left.workDir != "" || left.schedules.GetItemCount() != 2 {
 		t.Fatal("全体表示から予定を登録できません")
 	}

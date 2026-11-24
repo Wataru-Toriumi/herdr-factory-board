@@ -42,8 +42,8 @@ func (u *boardUI) runDetailAction(action detail.Action) {
 		})
 	case detail.EditTiming:
 		u.withDetailSchedule(u.editScheduleTiming)
-	case detail.EditSchedulePrompt:
-		u.withDetailSchedule(u.editSchedulePrompt)
+	case detail.EditScheduleSettings:
+		u.withDetailSchedule(func(r schedule.Rule) { u.openScheduleForm(r, r.TimingKind()) })
 	}
 }
 
