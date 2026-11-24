@@ -31,6 +31,11 @@ func (u *boardUI) showProjectList(list *tview.List, path, hint string) {
 func (u *boardUI) closeDirectory() {
 	u.pages.RemovePage("directory")
 	u.notice.SetText("")
+	if u.taskForm != nil {
+		u.pages.SwitchToPage("task-form")
+		u.focusTaskForm()
+		return
+	}
 	if u.detail.Card() != nil {
 		u.pages.SwitchToPage("detail")
 		u.detail.Render()

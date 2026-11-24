@@ -27,7 +27,7 @@ go build -o factory-board ./src
 
 | パッケージ | 担当する表示 |
 | --- | --- |
-| [taskboard](../src/tui/taskboard) | レーンの描画、画面幅に応じた列数、選択の追従、カードのキー操作 |
+| [taskboard](../src/tui/taskboard) | レーンの描画、画面幅に応じた列数、選択の追従、カードのキー操作、新規タスクの入力フォーム |
 | [agentlist](../src/tui/agentlist) | エージェント一覧の描画、入力待ちの並び順と件数、選択したペインへの移動受付 |
 | [detail](../src/tui/detail) | カードと元の予定の詳細画面、更新時の再描画、状態ごとのショートカットと操作案内 |
 | [automation](../src/tui/automation) | 定期実行の一覧、プロジェクト絞り込み、稼働表示、登録・編集フォームと時刻入力 |

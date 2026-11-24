@@ -4,7 +4,6 @@ package app
 import (
 	"context"
 
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
@@ -31,6 +30,7 @@ type boardUI struct {
 	workDir                       string
 	editor                        inputSession
 	scheduleForm                  *automation.Form
+	taskForm                      *taskboard.Form
 	projects                      []string
 	board                         boardSnapshot
 	panes                         []herdr.Pane
@@ -104,16 +104,17 @@ func (u *boardUI) activePage() string {
 }
 
 func (u *boardUI) showWorkDir() {
-	if u.activePage() == "schedule-form" {
+	switch u.activePage() {
+	case "task-form":
+		u.context.SetText(u.taskForm.Context())
+		return
+	case "schedule-form":
 		u.context.SetText(u.scheduleForm.Context())
 		return
-	}
-	if u.activePage() == "directory" {
+	case "directory":
 		return
 	}
-	if u.editor.dir != "" {
-		u.context.SetText("担当: " + board.AgentLabel(u.editor.agent) + "（Ctrl+G 切替）  登録先: " + u.editor.dir)
-	} else if u.tab == agentTab {
+	if u.tab == agentTab {
 		u.context.SetText("セッション内のエージェント")
 	} else if u.workDir == "" {
 		u.context.SetText("プロジェクト: すべて   p で選択")

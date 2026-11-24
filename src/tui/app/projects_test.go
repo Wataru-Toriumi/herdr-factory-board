@@ -69,11 +69,12 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	key(left, 'p')
 	choose(left, "api")
 	key(left, 'n')
+	press(left, tcell.KeyCtrlP)
 	choose(left, "web")
-	left.input.SetText("add 左のタスク")
+	taskPromptField(left).SetText("左のタスク", true)
 	right.execute("dir " + web)
 	left.refresh()
-	press(left, tcell.KeyEnter)
+	press(left, tcell.KeyCtrlS)
 	if left.workDir != api || left.tasks.List(taskboard.Todo).GetItemCount() != 1 || left.schedules.GetItemCount() != 0 {
 		t.Fatal("APIのカードと予定に絞り込まれていません")
 	}
