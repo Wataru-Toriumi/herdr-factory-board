@@ -1,4 +1,4 @@
-// Package automation は定期実行の一覧と稼働状態の表示を組み立てる。
+// Package automation は定期実行の一覧、設定フォーム、画面内のキー操作を担当する。
 package automation
 
 import (

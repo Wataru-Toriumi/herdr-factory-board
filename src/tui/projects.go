@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/widgets"
 	"github.com/rivo/tview"
 )
 
@@ -17,7 +18,7 @@ func (u *boardUI) pickProject(current string, filter bool, selected func(string)
 		browse()
 		return
 	}
-	list := boardList()
+	list := widgets.NewList()
 	title := " 作業先を選択 "
 	if filter {
 		title = " 表示するプロジェクト "

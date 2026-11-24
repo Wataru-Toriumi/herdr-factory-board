@@ -94,7 +94,7 @@ func TestBackgroundRefreshPreservesNewerLocalEdit(t *testing.T) {
 	}
 	u.refresh()
 	u.applyRefresh(old, sessionSnapshot{})
-	if c, ok := u.selectedCard(); !ok || c.Prompt != "追加したカード" {
+	if c, ok := u.tasks.SelectedCard(); !ok || c.Prompt != "追加したカード" {
 		t.Fatalf("更新後のカード: %+v, %t", c, ok)
 	}
 }

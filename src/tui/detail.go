@@ -1,6 +1,10 @@
 package tui
 
 import (
+	"strings"
+
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/detail"
@@ -11,44 +15,99 @@ func (u *boardUI) openCardDetail(c board.Card) {
 }
 
 func (u *boardUI) openDetail(title, body string, scheduleID int, card *board.Card) {
-	u.detailBody, u.detailScheduleID, u.detailCard = body, scheduleID, card
-	u.detail.SetTitle(" " + title + " ")
-	u.renderDetail()
-	u.detail.ScrollToBeginning()
+	u.detail.Open(title, body, scheduleID, card)
 	u.pages.SwitchToPage("detail")
 	u.app.SetFocus(u.detail)
 }
 
-func (u *boardUI) refreshDetail(b board.State) {
-	if u.detailCard != nil {
-		if c, err := b.FindCard(u.detailCard.ID); err == nil && *c != *u.detailCard {
-			card := *c
-			u.detailCard = &card
-			u.detailBody = detail.CardText(card)
-			u.renderDetail()
-			return
-		}
-	}
-	// カードが同じでも、元の予定が別ペインで変更・解除されることがある。
-	if u.detailScheduleID != 0 {
-		u.renderDetail()
+func (u *boardUI) runDetailAction(action detail.Action) {
+	switch action {
+	case detail.CancelCard:
+		u.cancelDetailCard()
+	case detail.ChangeCardAgent:
+		u.changeCardAgent(*u.detail.Card())
+	case detail.ChangeProject:
+		u.pickCardProject(*u.detail.Card())
+	case detail.StartDesign:
+		u.launchDetailPhase(board.DesignPhase, "")
+	case detail.ApproveResult:
+		u.approveDetailResult()
+	case detail.EditFeedback:
+		u.editFeedback()
+	case detail.StartImplementation:
+		u.launchDetailPhase(board.ImplementationPhase, "")
+	case detail.ReopenCard:
+		u.reopenDetail()
+	case detail.ChangeScheduleAgent:
+		u.withDetailSchedule(func(r schedule.Rule) {
+			u.finishDetailAction(scheduler.ChangeAgent(u.store, r.ID, r.Agent, board.NextAgent(r.Agent)))
+		})
+	case detail.EditTiming:
+		u.withDetailSchedule(u.editScheduleTiming)
+	case detail.EditScheduleSettings:
+		u.withDetailSchedule(func(r schedule.Rule) { u.openScheduleForm(r, r.TimingKind()) })
 	}
 }
 
-func (u *boardUI) renderDetail() {
-	text := u.detailBody
-	var rule *schedule.Rule
-	if id := u.detailScheduleID; id != 0 {
-		if r, ok := u.schedules.model.ByID(id); ok {
-			rule = &r
-			if u.detailCard == nil {
-				u.detailBody = detail.RuleBody(r)
-			}
+func (u *boardUI) withDetailSchedule(action func(schedule.Rule)) {
+	if r, ok := u.schedules.ByID(u.detail.ScheduleID()); ok {
+		action(r)
+	}
+}
+
+func (u *boardUI) cancelDetailCard() {
+	err := worker.Cancel(u.store, *u.detail.Card())
+	u.refresh()
+	if err != nil {
+		u.notice.SetText(err.Error())
+	}
+}
+
+func (u *boardUI) approveDetailResult() {
+	u.finishDetailAction(worker.ApproveResult(u.store, *u.detail.Card()))
+}
+
+func (u *boardUI) reopenDetail() {
+	u.finishDetailAction(worker.Reopen(u.store, *u.detail.Card()))
+}
+
+func (u *boardUI) launchDetailPhase(phase, feedback string) {
+	u.finishDetailAction(worker.StartPhase(u.store, u.herdr, *u.detail.Card(), phase, feedback))
+}
+
+func (u *boardUI) finishDetailAction(err error) {
+	u.notice.SetText("")
+	u.refresh()
+	if err != nil {
+		u.notice.SetText(err.Error())
+	}
+}
+
+func (u *boardUI) changeCardAgent(seen board.Card) {
+	u.finishDetailAction(u.store.ChangeCardAgent(seen, board.NextAgent(seen.Agent)))
+}
+
+func (u *boardUI) editFeedback() {
+	label := "再設計のコメント > "
+	if u.detail.Card().CanReviewResult() {
+		label = "実装の修正内容 > "
+	}
+	u.openInput(label, "", func(value string) {
+		if strings.TrimSpace(value) == "" {
+			u.notice.SetText("修正内容を入力してください")
+			return
 		}
-		text = detail.ScheduleText(u.detailBody, id, rule, u.detailCard == nil)
-	}
-	if u.detail.GetText(false) != text {
-		u.detail.SetText(text)
-	}
-	u.hint.SetText(detail.Shortcuts(u.detailCard, rule != nil).Hint())
+		u.closeFeedbackEditor()
+		u.launchDetailPhase(u.detail.Card().Phase, value)
+	}, func() {
+		u.closeFeedbackEditor()
+		u.refresh()
+	})
+}
+
+func (u *boardUI) closeFeedbackEditor() {
+	u.editor = inputSession{}
+	u.notice.SetText("")
+	u.footer.SwitchToPage("keys")
+	u.app.SetFocus(u.detail)
 }

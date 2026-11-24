@@ -58,15 +58,15 @@ func TestCancelRunningWorker(t *testing.T) {
 		t.Fatal("キャンセル後もワーカーが実行中です")
 	}
 	b, err := s.Read()
-	if err != nil || taskboard.LaneFor(b.Cards[0]) != taskboard.FailedOrCanceled || u.detailCard.Status != board.Canceled {
+	if err != nil || taskboard.LaneFor(b.Cards[0]) != taskboard.FailedOrCanceled || u.detail.Card().Status != board.Canceled {
 		t.Fatalf("キャンセル後のカード: %+v, %v", b, err)
 	}
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'u', 0))
-	if c := u.detailCard; c.Status != board.Todo || u.lane != taskboard.Todo || c.Dir != s.Dir || c.ID != 1 || c.Pane != "" {
+	if c := u.detail.Card(); c.Status != board.Todo || u.tasks.Lane() != taskboard.Todo || c.Dir != s.Dir || c.ID != 1 || c.Pane != "" {
 		t.Fatalf("再オープン後のカード: %+v", c)
 	}
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'd', 0))
-	if c := u.detailCard; c.Status != board.Starting || c.Attempt != 1 || c.Phase != board.DesignPhase {
+	if c := u.detail.Card(); c.Status != board.Starting || c.Attempt != 1 || c.Phase != board.DesignPhase {
 		t.Fatalf("再オープン後に設計を開始できません: %+v", c)
 	}
 }

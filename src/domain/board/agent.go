@@ -16,3 +16,11 @@ func AgentLabel(agent string) string {
 		return agent
 	}
 }
+
+// NextAgent は担当切替で次に選ぶエージェントを返す。
+func NextAgent(current string) string {
+	if current == Claude {
+		return Codex
+	}
+	return Claude
+}

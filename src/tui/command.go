@@ -4,7 +4,10 @@ import (
 	"path/filepath"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/command"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
 )
 
 func (u *boardUI) execute(line string) {
@@ -42,5 +45,17 @@ func (u *boardUI) runCommand(cmd command.Command, dir string) {
 		u.notice.SetText("チケットを追加しました。作業先: " + dir)
 	} else if c != nil {
 		u.openCardDetail(*c)
+	}
+}
+
+func (u *boardUI) focusAgent(row agentlist.Row) {
+	var err error
+	if row.CardID != 0 {
+		err = worker.Focus(u.store, u.herdr, row.CardID)
+	} else {
+		err = herdr.FocusAgent(u.herdr, row.Pane)
+	}
+	if err != nil {
+		u.notice.SetText(err.Error())
 	}
 }

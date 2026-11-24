@@ -1,13 +1,8 @@
 package tui
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/command"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/scheduler"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -34,7 +29,7 @@ func (u *boardUI) inputKey(event *tcell.EventKey) *tcell.EventKey {
 		if u.editor.dir == "" {
 			return event
 		}
-		u.editor.agent = nextAgent(u.editor.agent)
+		u.editor.agent = board.NextAgent(u.editor.agent)
 		u.showWorkDir()
 	default:
 		return event
@@ -56,61 +51,4 @@ func (u *boardUI) editForProject(line, dir string) {
 	u.editCommand(line)
 	u.editor.dir = dir
 	u.showWorkDir()
-}
-
-func (u *boardUI) editFeedback() {
-	label := "再設計のコメント > "
-	if u.detailCard.CanReviewResult() {
-		label = "実装の修正内容 > "
-	}
-	u.openInput(label, "", func(value string) {
-		if strings.TrimSpace(value) == "" {
-			u.notice.SetText("修正内容を入力してください")
-			return
-		}
-		u.closeFeedbackEditor()
-		u.launchDetailPhase(u.detailCard.Phase, value)
-	}, func() {
-		u.closeFeedbackEditor()
-		u.refresh()
-	})
-}
-
-func (u *boardUI) closeFeedbackEditor() {
-	u.editor = inputSession{}
-	u.notice.SetText("")
-	u.footer.SwitchToPage("keys")
-	u.app.SetFocus(u.detail)
-}
-
-func (u *boardUI) editScheduleTiming(r schedule.Rule) {
-	label := "時刻（HH:MM）"
-	if r.TimingKind() == schedule.Every {
-		label = "間隔（例 15m）"
-	}
-	u.openInput(fmt.Sprintf("#%d %s > ", r.ID, label), r.TimingValue(), func(value string) {
-		if err := scheduler.ChangeTiming(u.store, r, value); err != nil {
-			var conflict *scheduler.TimingConflict
-			if errors.As(err, &conflict) {
-				u.editScheduleTiming(conflict.Current)
-			}
-			u.notice.SetText(err.Error())
-			return
-		}
-		u.closeScheduleEditor()
-		u.refresh()
-	}, u.closeScheduleEditor)
-	u.notice.SetText("")
-}
-
-func (u *boardUI) closeScheduleEditor() {
-	u.editor = inputSession{}
-	u.notice.SetText("")
-	if page, _ := u.pages.GetFrontPage(); page == "detail" {
-		u.footer.SwitchToPage("keys")
-		u.renderDetail()
-		u.app.SetFocus(u.detail)
-		return
-	}
-	u.switchView()
 }
