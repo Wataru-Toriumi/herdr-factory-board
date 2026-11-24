@@ -1,5 +1,5 @@
-// Package tui は Factory Board の端末画面とキー操作を担当する。
-package tui
+// Package app はボードの各画面を組み立て、入力・保存・画面遷移をつなぐ。
+package app
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/automation"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/detail"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/terminal"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -76,13 +77,10 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 	return u
 }
 
-func Run(s store.Store, herdr string) error {
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		return err
-	}
+// Run は指定された端末画面でボードの更新と入力受付を開始する。
+func Run(s store.Store, herdr string, screen tcell.Screen) error {
 	u := newBoardUI(s, herdr)
-	if err := setBoardScreen(u.app, screen); err != nil {
+	if err := terminal.SetScreen(u.app, screen); err != nil {
 		return err
 	}
 	return u.run()

@@ -1,4 +1,4 @@
-package tui
+package app
 
 import (
 	"strings"
@@ -10,6 +10,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/terminal"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -81,7 +82,7 @@ func TestScheduleFormPreservesPastedLines(t *testing.T) {
 	u := newBoardUI(s, "true")
 	u.workDir = s.Dir
 	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := setBoardScreen(u.app, screen); err != nil {
+	if err := terminal.SetScreen(u.app, screen); err != nil {
 		t.Fatal(err)
 	}
 	key := func(k tcell.Key) { screen.PostEventWait(tcell.NewEventKey(k, 0, 0)) }
