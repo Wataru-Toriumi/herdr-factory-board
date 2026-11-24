@@ -8,6 +8,11 @@ platforms = ["macos", "linux"]
 [[build]]
 command = ["go", "build", "-o", "factory-board", "./src"]
 
+[[actions]]
+id = "open-board"
+title = "Factory Board を開く"
+command = ["sh", "-c", 'exec "$HERDR_BIN_PATH" plugin pane open --plugin "$HERDR_PLUGIN_ID" --entrypoint board']
+
 [[panes]]
 id = "board"
 title = "Factory Board"
