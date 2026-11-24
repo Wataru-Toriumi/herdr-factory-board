@@ -11,29 +11,23 @@ import (
 )
 
 func (u *boardUI) execute(line string) {
-	u.executeAt(command.Parse(line), "")
-}
-
-func (u *boardUI) executeAt(cmd command.Command, dir string) {
+	cmd := command.Parse(line)
 	u.notice.SetText("")
-	if dir == "" {
-		run := func(selected string) { u.runCommand(cmd, selected) }
-		switch cmd.Name {
-		case "add":
-			if cmd.Arg != "" {
-				u.pickProject(u.workDir, false, run)
-				return
-			}
-		case schedule.Daily, schedule.Every:
-			u.selectScheduleProject(run)
+	run := func(dir string) { u.runCommand(cmd, dir) }
+	switch cmd.Name {
+	case "add":
+		if cmd.Arg != "" {
+			u.pickProject(u.workDir, false, run)
 			return
 		}
-		dir = u.workDir
+	case schedule.Daily, schedule.Every:
+		u.selectScheduleProject(run)
+		return
 	}
-	u.runCommand(cmd, dir)
+	run(u.workDir)
 }
 
-func (u *boardUI) runCommand(cmd command.Command, dir string) {
+func (u *boardUI) runCommand(cmd command.Command, dir string) error {
 	c, err := cmd.Run(u.store, u.herdr, dir)
 	if err == nil && cmd.Name == "dir" {
 		u.workDir = filepath.Clean(cmd.Arg)
@@ -46,6 +40,7 @@ func (u *boardUI) runCommand(cmd command.Command, dir string) {
 	} else if c != nil {
 		u.openCardDetail(*c)
 	}
+	return err
 }
 
 func (u *boardUI) focusAgent(row agentlist.Row) {

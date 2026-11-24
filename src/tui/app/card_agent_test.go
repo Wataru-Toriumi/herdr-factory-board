@@ -16,10 +16,11 @@ func TestAgentSelectionForCardsAndSchedules(t *testing.T) {
 	press := func(k tcell.Key) { u.key(tcell.NewEventKey(k, 0, 0)) }
 	key := func(r rune) { u.key(tcell.NewEventKey(tcell.KeyRune, r, 0)) }
 
-	u.editForProject("add ", s.Dir)
+	u.workDir = s.Dir
+	key('n')
 	press(tcell.KeyCtrlG)
-	u.input.SetText("add 手動タスク")
-	press(tcell.KeyEnter)
+	taskPromptField(u).SetText("手動タスク", true)
+	press(tcell.KeyCtrlS)
 	key('v')
 	if u.detail.Card().Agent != board.Claude || !strings.Contains(u.detail.GetText(false), "Claude Code") {
 		t.Fatalf("手動カードの担当: %+v", u.detail.Card())

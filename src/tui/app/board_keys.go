@@ -12,6 +12,8 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		return event
+	case "task-form":
+		return u.taskForm.HandleKey(event)
 	case "schedule-form":
 		return u.scheduleForm.HandleKey(event)
 	case "input":
@@ -44,7 +46,7 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyRune:
 		switch event.Rune() {
 		case 'n':
-			u.pickProject(u.workDir, false, func(dir string) { u.editForProject("add ", dir) })
+			u.newTaskForm()
 		case 'p':
 			u.pickProject(u.workDir, true, func(dir string) {
 				u.workDir = dir
