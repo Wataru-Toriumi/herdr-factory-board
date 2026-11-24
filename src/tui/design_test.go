@@ -66,15 +66,15 @@ printf '%s' "$ANSWER" > "$result"
 	press := func(k tcell.Key) { u.key(tcell.NewEventKey(k, 0, 0)) }
 	key('v')
 	key('d')
-	if c := u.detailCard; u.lane != taskboard.Design || c.Status != board.Starting || c.Phase != board.DesignPhase {
+	if c := u.detail.Card(); u.tasks.Lane() != taskboard.Design || c.Status != board.Starting || c.Phase != board.DesignPhase {
 		t.Fatalf("設計開始: %+v", c)
 	}
 	if prompt := run(1, "design", "設計案A"); !strings.Contains(prompt, "検索を追加") {
 		t.Fatal(prompt)
 	}
 	u.refresh()
-	first := *u.detailCard
-	if u.lane != taskboard.DesignComplete || !first.CanReviewDesign() || first.Design != "設計案A" || first.Attempt != 1 || !strings.Contains(u.hint.GetText(false), "承認") {
+	first := *u.detail.Card()
+	if u.tasks.Lane() != taskboard.DesignComplete || !first.CanReviewDesign() || first.Design != "設計案A" || first.Attempt != 1 || !strings.Contains(u.hint.GetText(false), "承認") {
 		t.Fatalf("設計レビュー: %+v", first)
 	}
 	if err := worker.Start(s, "true", 1); err == nil {
@@ -86,14 +86,14 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal("空のコメントが受理されました")
 	}
 	press(tcell.KeyEscape)
-	if u.activePage() != "detail" || u.detailCard.Status != board.AwaitingDesignReview {
+	if u.activePage() != "detail" || u.detail.Card().Status != board.AwaitingDesignReview {
 		t.Fatal("キャンセル後のレビュー状態が不正です")
 	}
 	key('r')
 	u.input.SetText("索引を使う")
 	press(tcell.KeyEnter)
-	if u.lane != taskboard.Design || u.detailCard.Status != board.Starting {
-		t.Fatalf("再設計開始: %+v", u.detailCard)
+	if u.tasks.Lane() != taskboard.Design || u.detail.Card().Status != board.Starting {
+		t.Fatalf("再設計開始: %+v", u.detail.Card())
 	}
 	prompt := run(2, "design", "設計案B")
 	for _, part := range []string{"検索を追加", "設計案A", "索引を使う"} {
@@ -112,12 +112,12 @@ printf '%s' "$ANSWER" > "$result"
 		press(tcell.KeyRight)
 	}
 	press(tcell.KeyEnter)
-	if c := u.detailCard; c == nil || c.Design != "設計案B" || c.Status != board.AwaitingDesignReview || !strings.Contains(u.detail.GetText(false), "設計完了") {
+	if c := u.detail.Card(); c == nil || c.Design != "設計案B" || c.Status != board.AwaitingDesignReview || !strings.Contains(u.detail.GetText(false), "設計完了") {
 		t.Fatalf("再設計結果: %+v", c)
 	}
 	key('a')
-	if u.detailCard.Status != board.Starting || taskboard.LaneFor(*u.detailCard) != taskboard.Work {
-		t.Fatalf("実装開始時の列: %+v", u.detailCard)
+	if u.detail.Card().Status != board.Starting || taskboard.LaneFor(*u.detail.Card()) != taskboard.Work {
+		t.Fatalf("実装開始時の列: %+v", u.detail.Card())
 	}
 	key('a')
 	prompt = run(3, "implementation", "実装とテストが完了")
@@ -125,10 +125,10 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal(prompt)
 	}
 	u.refresh()
-	if c := u.detailCard; c.Status != board.AwaitingResultReview || taskboard.LaneFor(*c) != taskboard.Review || !strings.Contains(u.hint.GetText(false), "承認して完了") {
+	if c := u.detail.Card(); c.Status != board.AwaitingResultReview || taskboard.LaneFor(*c) != taskboard.Review || !strings.Contains(u.hint.GetText(false), "承認して完了") {
 		t.Fatalf("実装結果のレビュー: %+v", c)
 	}
-	review := *u.detailCard
+	review := *u.detail.Card()
 	if err := worker.Start(s, "true", review.ID); err == nil {
 		t.Fatal("レビュー中に実装が再起動されました")
 	}
@@ -142,18 +142,18 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal("レビュー中のカードで結果を確認できません")
 	}
 	key('a')
-	if u.lane != taskboard.Done {
+	if u.tasks.Lane() != taskboard.Done {
 		t.Fatal("承認後に完了列へ移動しませんでした")
 	}
 	if err := worker.ApproveResult(s, review); err == nil {
 		t.Fatal("同じレビューを二度承認できました")
 	}
-	if c := u.detailCard; c.Status != board.Done || c.Attempt != 3 || c.Design != "設計案B" || c.Result != "実装とテストが完了" || c.Phase != board.ImplementationPhase {
+	if c := u.detail.Card(); c.Status != board.Done || c.Attempt != 3 || c.Design != "設計案B" || c.Result != "実装とテストが完了" || c.Phase != board.ImplementationPhase {
 		t.Fatalf("実装結果: %+v", c)
 	}
 
 	key('u')
-	if c := u.detailCard; u.lane != taskboard.Review || c.Result != review.Result || c.Attempt != review.Attempt {
+	if c := u.detail.Card(); u.tasks.Lane() != taskboard.Review || c.Result != review.Result || c.Attempt != review.Attempt {
 		t.Fatalf("承認取り消し後: %+v", c)
 	}
 	if err := worker.ApproveResult(s, review); err == nil {
@@ -165,14 +165,14 @@ printf '%s' "$ANSWER" > "$result"
 		t.Fatal("空の実装修正依頼が送信されました")
 	}
 	press(tcell.KeyEscape)
-	if u.activePage() != "detail" || !u.detailCard.CanReviewResult() {
+	if u.activePage() != "detail" || !u.detail.Card().CanReviewResult() {
 		t.Fatal("修正依頼の取り消し後にレビューを続けられません")
 	}
 	key('r')
 	u.input.SetText("結果が空の場合も検証して")
 	press(tcell.KeyEnter)
-	if u.lane != taskboard.Work || u.detailCard.Status != board.Starting {
-		t.Fatalf("実装差し戻し後: %+v", u.detailCard)
+	if u.tasks.Lane() != taskboard.Work || u.detail.Card().Status != board.Starting {
+		t.Fatalf("実装差し戻し後: %+v", u.detail.Card())
 	}
 	prompt = run(4, "implementation", "空の検索結果も検証済み")
 	for _, part := range []string{"検索を追加", "設計案B", review.Result, "結果が空の場合も検証して"} {
@@ -181,11 +181,11 @@ printf '%s' "$ANSWER" > "$result"
 		}
 	}
 	u.refresh()
-	if u.lane != taskboard.Review || u.detailCard.Result != "空の検索結果も検証済み" {
-		t.Fatalf("修正後のレビュー: %+v", u.detailCard)
+	if u.tasks.Lane() != taskboard.Review || u.detail.Card().Result != "空の検索結果も検証済み" {
+		t.Fatalf("修正後のレビュー: %+v", u.detail.Card())
 	}
 	key('a')
-	if u.lane != taskboard.Done {
+	if u.tasks.Lane() != taskboard.Done {
 		t.Fatal("修正後の結果を承認できません")
 	}
 }
@@ -268,7 +268,7 @@ func TestReopenedCardCanStartFresh(t *testing.T) {
 	u := newBoardUI(s, "true")
 	u.execute("result 1")
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'u', 0))
-	if c := u.detailCard; c.Phase != "" || c.Result != "中断時の結果" || c.Design != "以前の設計" {
+	if c := u.detail.Card(); c.Phase != "" || c.Result != "中断時の結果" || c.Design != "以前の設計" {
 		t.Fatalf("未着手に戻した直後の記録: %+v", c)
 	}
 	u.key(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
@@ -307,7 +307,7 @@ func TestFeedbackEditorKeepsReviewedDesignDuringRefresh(t *testing.T) {
 	if u.activePage() != "detail" || u.app.GetFocus() != u.detail || !strings.Contains(u.notice.GetText(false), "カードが更新") {
 		t.Fatalf("古い設計案への送信後: %s, %s", u.activePage(), u.notice.GetText(false))
 	}
-	if c := u.detailCard; c.Design != "別ペインの設計案" || c.Status != board.AwaitingDesignReview || c.Feedback != "" {
+	if c := u.detail.Card(); c.Design != "別ペインの設計案" || c.Status != board.AwaitingDesignReview || c.Feedback != "" {
 		t.Fatalf("最新のカード: %+v", c)
 	}
 }

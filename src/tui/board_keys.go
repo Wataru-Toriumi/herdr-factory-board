@@ -13,11 +13,11 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	case "schedule-form":
-		return u.scheduleFormKey(event)
+		return u.scheduleForm.HandleKey(event)
 	case "input":
 		return u.inputKey(event)
 	case "detail":
-		if key == tcell.KeyRune && u.detailKey(event.Rune()) {
+		if key == tcell.KeyRune && u.detail.HandleKey(event.Rune(), u.runDetailAction) {
 			return nil
 		}
 		if key == tcell.KeyEscape {

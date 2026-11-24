@@ -23,14 +23,14 @@ go build -o factory-board ./src
 
 たとえば、`every 15m` の入力は TUI から `command` を経て `scheduler` に届きます。`scheduler` は `schedule` で実行間隔を設定し、`store` で保存します。画面更新の際は、TUI が `store` からボードを、`herdr` からペイン一覧を直接読み取ります。
 
-画面に表示する内容は次のパッケージで組み立てます。ウィジェットへの反映、キー入力、フォーカス、操作の実行は `src/tui` が担当します。
+画面に表示する内容は次のパッケージで組み立てます。各機能が一覧・フォーム・詳細画面を描画し、専用のキー操作を受け取ります。親の `tui` はタブの切り替え、画面間のフォーカス移動、更新、保存やペイン操作を担当します。複数の画面で使う一覧部品と選択行の保持は `widgets` にまとめています。
 
 | パッケージ | 担当する表示 |
 | --- | --- |
-| [taskboard](../src/tui/taskboard) | レーンごとの表示行、プロジェクト絞り込み、更新後の選択位置 |
-| [agentlist](../src/tui/agentlist) | ペインと担当カードの対応、入力待ちの並び順と件数 |
-| [detail](../src/tui/detail) | カードと元の予定の詳細本文、状態ごとのショートカットと操作案内 |
-| [automation](../src/tui/automation) | 定期実行の一覧、プロジェクト絞り込み、スケジューラーの稼働表示 |
+| [taskboard](../src/tui/taskboard) | レーンの描画、画面幅に応じた列数、選択の追従、カードのキー操作 |
+| [agentlist](../src/tui/agentlist) | エージェント一覧の描画、入力待ちの並び順と件数、選択したペインへの移動受付 |
+| [detail](../src/tui/detail) | カードと元の予定の詳細画面、更新時の再描画、状態ごとのショートカットと操作案内 |
+| [automation](../src/tui/automation) | 定期実行の一覧、プロジェクト絞り込み、稼働表示、登録・編集フォームと時刻入力 |
 
 ### 依存ルールの確認
 
@@ -38,7 +38,7 @@ go build -o factory-board ./src
 
 - `board` が直接 import できるモジュール内のパッケージは `schedule` だけです。
 - `schedule` と `herdr` は標準ライブラリだけを直接 import します。
-- 画面ライブラリの `tview` と `tcell/v2` を直接 import するのは `tui` だけです。
-- 表示用パッケージはモジュール内の `domain` 配下を参照できます。`agentlist` はペイン・ワークスペースの型を使うため、`infrastructure/herdr` も参照できます。
+- 画面ライブラリの `tview` と `tcell/v2` を直接 import できるのは `tui`、上表の4つの画面パッケージ、共通部品の `widgets` です。
+- 表示用パッケージはモジュール内の `domain` 配下を参照できます。一覧を持つ `taskboard`・`agentlist`・`automation` は `widgets` も参照できます。`widgets` はモジュール内の他パッケージから独立しています。`agentlist` はペイン・ワークスペースの型を使うため、`infrastructure/herdr` も参照できます。
 
 検査対象は現在のビルド環境で使われる本体コードです。全体は `go test ./...`、依存関係だけなら `go test -count=1 -run '^TestPackageDependencies$' ./src` で確認できます。

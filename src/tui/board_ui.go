@@ -5,76 +5,61 @@ import (
 	"context"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/automation"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/detail"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 type boardUI struct {
-	app                                   *tview.Application
-	store                                 store.Store
-	herdr                                 string
-	pages                                 *tview.Pages
-	columns                               *tview.Flex
-	lists                                 [len(taskLanes)]*rowList[taskboard.Row]
-	agents                                *agentList
-	schedules                             *scheduleList
-	header, context, hint, notice, detail *tview.TextView
-	input                                 *tview.InputField
-	footer                                *tview.Pages
-	workDir                               string
-	editor                                inputSession
-	scheduleForm                          *scheduleForm
-	projects                              []string
-	detailScheduleID                      int
-	detailBody                            string
-	detailCard                            *board.Card
-	board                                 boardSnapshot
-	panes                                 []herdr.Pane
-	spaces                                []herdr.Workspace
-	sessionError                          string
-	tabs                                  []tabView
-	tab                                   int
-	lane                                  int
-	compact                               bool
-}
-
-func boardList() *tview.List {
-	l := tview.NewList().SetSelectedFocusOnly(true).SetHighlightFullLine(true).SetWrapAround(false)
-	l.SetSecondaryTextColor(tcell.ColorLightSlateGray)
-	l.SetSelectedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorWhite))
-	l.SetBorder(true)
-	return l
+	app                           *tview.Application
+	store                         store.Store
+	herdr                         string
+	pages                         *tview.Pages
+	tasks                         *taskboard.View
+	agents                        *agentlist.List
+	schedules                     *automation.List
+	header, context, hint, notice *tview.TextView
+	detail                        *detail.View
+	input                         *tview.InputField
+	footer                        *tview.Pages
+	workDir                       string
+	editor                        inputSession
+	scheduleForm                  *automation.Form
+	projects                      []string
+	board                         boardSnapshot
+	panes                         []herdr.Pane
+	spaces                        []herdr.Workspace
+	sessionError                  string
+	tabs                          []tabView
+	tab                           int
 }
 
 func newBoardUI(s store.Store, herdr string) *boardUI {
 	u := &boardUI{
-		app:       tview.NewApplication(),
-		store:     s,
-		herdr:     herdr,
-		pages:     tview.NewPages(),
-		columns:   tview.NewFlex(),
-		header:    tview.NewTextView().SetDynamicColors(true),
-		context:   tview.NewTextView().SetWrap(false),
-		detail:    tview.NewTextView().SetScrollable(true).SetWordWrap(true),
-		notice:    tview.NewTextView().SetWrap(false),
-		hint:      tview.NewTextView().SetWrap(false),
-		input:     tview.NewInputField().SetLabel("> "),
-		footer:    tview.NewPages(),
-		agents:    &agentList{rowList: newRowList[agentlist.Row]()},
-		schedules: &scheduleList{rowList: newRowList[schedule.Rule]()},
+		app:     tview.NewApplication(),
+		store:   s,
+		herdr:   herdr,
+		pages:   tview.NewPages(),
+		header:  tview.NewTextView().SetDynamicColors(true),
+		context: tview.NewTextView().SetWrap(false),
+		notice:  tview.NewTextView().SetWrap(false),
+		hint:    tview.NewTextView().SetWrap(false),
+		input:   tview.NewInputField().SetLabel("> "),
+		footer:  tview.NewPages(),
 	}
-	for i, lane := range taskLanes {
-		u.lists[i] = newRowList[taskboard.Row]()
-		u.lists[i].SetTitleColor(lane.color)
-	}
-	u.layoutColumns()
-	u.agents.SetTitle(" エージェント ").SetTitleAlign(tview.AlignLeft)
-	u.detail.SetBorder(true).SetTitleAlign(tview.AlignLeft)
+	u.schedules = u.newScheduleList()
+	u.tasks = taskboard.NewView(u.execute, func(list tview.Primitive) {
+		if u.activePage() == u.tabs[taskTab].page {
+			u.app.SetFocus(list)
+		}
+	})
+	u.agents = agentlist.NewList(u.focusAgent)
+	u.detail = detail.NewView(u.schedules.ByID, func(hint string) { u.hint.SetText(hint) })
 	u.registerTabs()
 	u.pages.AddPage("detail", u.detail, true, false)
 	u.footer.AddPage("keys", u.hint, true, true).AddPage("input", u.input, true, false)
@@ -84,10 +69,7 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 	u.app.SetRoot(root, true).SetInputCapture(u.key)
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		width, _ := screen.Size()
-		if narrow := width < 17*len(taskLanes); narrow != u.compact {
-			u.compact = narrow
-			u.layoutColumns()
-		}
+		u.tasks.Resize(width)
 		return false
 	})
 	u.switchView()
@@ -114,15 +96,6 @@ func (u *boardUI) run() error {
 	return u.app.Run()
 }
 
-func (u *boardUI) layoutColumns() {
-	u.columns.Clear()
-	for i, l := range u.lists {
-		if !u.compact || i == u.lane {
-			u.columns.AddItem(l, 0, 1, false)
-		}
-	}
-}
-
 // コマンド入力中はフッター、それ以外は本文のページがキー操作を受け取る。
 func (u *boardUI) activePage() string {
 	if page, _ := u.footer.GetFrontPage(); page == "input" {
@@ -132,15 +105,9 @@ func (u *boardUI) activePage() string {
 	return page
 }
 
-func (u *boardUI) selectedCard() (board.Card, bool) {
-	row, ok := u.lists[u.lane].selected()
-	return row.Card, ok
-}
-
 func (u *boardUI) showWorkDir() {
 	if u.activePage() == "schedule-form" {
-		f := u.scheduleForm
-		u.context.SetText("担当: " + board.AgentLabel(f.agent) + "（Ctrl+G 切替）  作業先: " + f.rule.Dir)
+		u.context.SetText(u.scheduleForm.Context())
 		return
 	}
 	if u.activePage() == "directory" {

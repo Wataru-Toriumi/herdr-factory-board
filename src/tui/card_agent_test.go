@@ -21,19 +21,19 @@ func TestAgentSelectionForCardsAndSchedules(t *testing.T) {
 	u.input.SetText("add 手動タスク")
 	press(tcell.KeyEnter)
 	key('v')
-	if u.detailCard.Agent != board.Claude || !strings.Contains(u.detail.GetText(false), "Claude Code") {
-		t.Fatalf("手動カードの担当: %+v", u.detailCard)
+	if u.detail.Card().Agent != board.Claude || !strings.Contains(u.detail.GetText(false), "Claude Code") {
+		t.Fatalf("手動カードの担当: %+v", u.detail.Card())
 	}
 	key('g')
-	if u.detailCard.Agent != board.Codex {
+	if u.detail.Card().Agent != board.Codex {
 		t.Fatal("未着手カードの担当を変更できません")
 	}
 	press(tcell.KeyEscape)
 	press(tcell.KeyBacktab)
 	key('i')
 	press(tcell.KeyCtrlG)
-	u.scheduleForm.timing.SetText("1m")
-	u.scheduleForm.prompt.SetText("定期タスク", true)
+	scheduleTimeField(u).SetText("1m")
+	schedulePromptField(u).SetText("定期タスク", true)
 	press(tcell.KeyCtrlS)
 	press(tcell.KeyEnter)
 	if !strings.Contains(u.detail.GetText(false), "Claude Code") {
@@ -66,7 +66,7 @@ func TestAgentChangeRejectsStaleCardDetail(t *testing.T) {
 	u := newBoardUI(s, "true")
 	u.refresh()
 	u.key(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
-	seen := *u.detailCard
+	seen := *u.detail.Card()
 	if err := s.ChangeCardProject(seen, "/web"); err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestAgentChangeRejectsStaleCardDetail(t *testing.T) {
 	}
 	want := seen
 	want.Dir = "/web"
-	if *u.detailCard != want {
-		t.Fatalf("変更後のカード = %+v, 期待値 = %+v", *u.detailCard, want)
+	if *u.detail.Card() != want {
+		t.Fatalf("変更後のカード = %+v, 期待値 = %+v", *u.detail.Card(), want)
 	}
 }

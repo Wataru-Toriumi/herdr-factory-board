@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/widgets"
 	"github.com/rivo/tview"
 )
 
@@ -25,9 +26,9 @@ func (u *boardUI) pickDirectory(start string, choose func(string)) {
 func (u *boardUI) closeDirectory() {
 	u.pages.RemovePage("directory")
 	u.notice.SetText("")
-	if u.detailCard != nil {
+	if u.detail.Card() != nil {
 		u.pages.SwitchToPage("detail")
-		u.renderDetail()
+		u.detail.Render()
 		u.app.SetFocus(u.detail)
 		u.showWorkDir()
 		return
@@ -41,7 +42,7 @@ func (u *boardUI) browseDirectory(path string, choose func(string)) error {
 		return err
 	}
 
-	list := boardList().ShowSecondaryText(false)
+	list := widgets.NewList().ShowSecondaryText(false)
 	list.SetTitle(" 作業先を選択 ").SetTitleAlign(tview.AlignLeft)
 	list.AddItem("このフォルダを作業先にする", "", 0, func() {
 		if err := u.store.RegisterProject(path); err != nil {

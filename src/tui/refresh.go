@@ -103,15 +103,15 @@ func (u *boardUI) renderBoard(snapshot boardSnapshot) {
 	}
 	b := u.board.state
 	u.projects = b.ProjectDirs()
-	u.schedules.render(b.Schedules, u.workDir, u.board.active, u.board.schedulerErr)
+	u.schedules.Render(b.Schedules, u.workDir, u.board.active, u.board.schedulerErr)
 	if u.activePage() == "detail" {
-		u.refreshDetail(b)
+		u.detail.Refresh(b)
 	}
-	u.renderTasks(b.Cards)
+	u.tasks.Render(b.Cards, u.projects, u.workDir)
 	if u.board.schedulerErr != nil {
 		u.notice.SetText(u.board.schedulerErr.Error())
 	}
 	u.showWorkDir()
-	u.agents.render(agentlist.Build(u.panes, u.spaces, b.Cards))
+	u.agents.Render(agentlist.Build(u.panes, u.spaces, b.Cards))
 	u.updateHeader()
 }

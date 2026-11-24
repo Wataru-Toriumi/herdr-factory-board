@@ -24,7 +24,7 @@ func TestAgentEnterUsesCurrentCardPane(t *testing.T) {
 	}
 	card := board.Card{ID: 1, Status: board.Running, Pane: "p1"}
 	u := newBoardUI(s, bin)
-	u.agents.render(agentlist.Build([]herdr.Pane{{ID: "p1"}}, nil, []board.Card{card}))
+	u.agents.Render(agentlist.Build([]herdr.Pane{{ID: "p1"}}, nil, []board.Card{card}))
 	u.key(tcell.NewEventKey(tcell.KeyTab, 0, 0))
 
 	// 一覧の次回更新より先に、保存済みのカードが変わる場合を再現する。

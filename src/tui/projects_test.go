@@ -58,10 +58,10 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 		t.Fatalf("選択肢に %q がありません", name)
 	}
 
-	if !slices.Equal(left.projects, []string{api, web}) || left.lists[taskboard.Todo].GetItemCount() != 2 {
+	if !slices.Equal(left.projects, []string{api, web}) || left.tasks.List(taskboard.Todo).GetItemCount() != 2 {
 		t.Fatal("旧版のボードからプロジェクトを復元できません")
 	}
-	_, label := left.lists[taskboard.Todo].GetItemText(1)
+	_, label := left.tasks.List(taskboard.Todo).GetItemText(1)
 	if !strings.Contains(label, "web") {
 		t.Fatalf("全体表示のカードにプロジェクト名がありません: %s", label)
 	}
@@ -74,24 +74,24 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	right.execute("dir " + web)
 	left.refresh()
 	press(left, tcell.KeyEnter)
-	if left.workDir != api || left.lists[taskboard.Todo].GetItemCount() != 1 || left.schedules.GetItemCount() != 0 {
+	if left.workDir != api || left.tasks.List(taskboard.Todo).GetItemCount() != 1 || left.schedules.GetItemCount() != 0 {
 		t.Fatal("APIのカードと予定に絞り込まれていません")
 	}
 	right.refresh()
-	if right.lists[taskboard.Todo].GetItemCount() != 2 || right.schedules.GetItemCount() != 1 {
+	if right.tasks.List(taskboard.Todo).GetItemCount() != 2 || right.schedules.GetItemCount() != 1 {
 		t.Fatal("Webのカードと予定に絞り込まれていません")
 	}
 
-	right.lists[taskboard.Todo].SetCurrentItem(1)
+	right.tasks.List(taskboard.Todo).SetCurrentItem(1)
 	key(right, 'v')
 	key(right, 'p')
 	press(right, tcell.KeyEscape)
-	if right.activePage() != "detail" || right.detailCard.Dir != web {
+	if right.activePage() != "detail" || right.detail.Card().Dir != web {
 		t.Fatal("作業先の選択を取り消すと元のチケット詳細に戻れません")
 	}
 	key(right, 'p')
 	choose(right, "api")
-	if right.activePage() != "detail" || right.detailCard.Dir != api || right.workDir != web || right.lists[taskboard.Todo].GetItemCount() != 1 {
+	if right.activePage() != "detail" || right.detail.Card().Dir != api || right.workDir != web || right.tasks.List(taskboard.Todo).GetItemCount() != 1 {
 		t.Fatal("チケットの作業先変更が反映されません")
 	}
 	press(right, tcell.KeyEscape)
@@ -101,8 +101,8 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 	press(left, tcell.KeyBacktab)
 	key(left, 'i')
 	choose(left, "api")
-	left.scheduleForm.timing.SetText("15m")
-	left.scheduleForm.prompt.SetText("API確認", true)
+	scheduleTimeField(left).SetText("15m")
+	schedulePromptField(left).SetText("API確認", true)
 	press(left, tcell.KeyCtrlS)
 	if left.workDir != "" || left.schedules.GetItemCount() != 2 {
 		t.Fatal("全体表示から予定を登録できません")
@@ -122,7 +122,7 @@ func TestProjectSelectionAcrossPanes(t *testing.T) {
 		t.Fatal(err)
 	}
 	choose(right, "api")
-	if right.detailCard.Dir != web || right.detailCard.Status != board.Starting || !strings.Contains(right.notice.GetText(false), "更新") {
+	if right.detail.Card().Dir != web || right.detail.Card().Status != board.Starting || !strings.Contains(right.notice.GetText(false), "更新") {
 		t.Fatal("選択中に起動したカードの作業先を保護できません")
 	}
 	if err := scheduler.RunDue(s, "true", b.Schedules[1].Interval.NextRun); err != nil {
