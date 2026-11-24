@@ -13,13 +13,19 @@ import (
 
 func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 	when, prompt, _ := strings.Cut(arg, " ")
-	rule := schedule.Rule{Agent: agent, Prompt: strings.TrimSpace(prompt), Dir: dir}
+	_, err := RegisterRule(s, herdrBin, schedule.Rule{Agent: agent, Prompt: prompt, Dir: dir}, kind, when)
+	return err
+}
+
+// RegisterRule は保存した予定番号を返す。保存後の起動失敗でも同じ予定を二重登録しないために使う。
+func RegisterRule(s store.Store, herdrBin string, rule schedule.Rule, kind, when string) (int, error) {
+	rule.Prompt = strings.TrimSpace(rule.Prompt)
 	if rule.Prompt == "" {
-		return errors.New("作業内容を入力してください")
+		return 0, errors.New("作業内容を入力してください")
 	}
 	var id int
 	if err := s.Edit(func(b *board.State) error {
-		if dir == "" {
+		if rule.Dir == "" {
 			return errors.New("先に dir で作業先を指定してください")
 		}
 		if err := rule.SetTiming(kind, when, time.Now()); err != nil {
@@ -28,12 +34,12 @@ func Register(s store.Store, herdrBin, dir, kind, arg, agent string) error {
 		id = b.AddSchedule(rule)
 		return nil
 	}); err != nil {
-		return err
+		return 0, err
 	}
 	if err := EnsureRunning(s, herdrBin); err != nil {
-		return fmt.Errorf("予定 #%d は保存済みです。scheduler で起動を再試行してください（%w）", id, err)
+		return id, fmt.Errorf("予定 #%d は保存済みです。scheduler で起動を再試行してください（%w）", id, err)
 	}
-	return nil
+	return id, nil
 }
 
 func UpdateTiming(s store.Store, id int, value string) error {
@@ -89,13 +95,40 @@ func ChangePrompt(s store.Store, seen schedule.Rule, value string) error {
 		if r.Prompt != seen.Prompt {
 			return &PromptConflict{Current: *r}
 		}
-		prompt := strings.TrimSpace(value)
-		if prompt == "" {
-			return errors.New("実行内容を入力してください")
+		return setPrompt(r, value)
+	})
+}
+
+func setPrompt(r *schedule.Rule, value string) error {
+	prompt := strings.TrimSpace(value)
+	if prompt == "" {
+		return errors.New("実行内容を入力してください")
+	}
+	r.Prompt = prompt
+	return nil
+}
+
+// ChangeSettings は編集中の設定をまとめて保存し、競合時は最新の予定を返す。
+func ChangeSettings(s store.Store, seen schedule.Rule, timing, prompt, agent string) (*schedule.Rule, error) {
+	var conflict *schedule.Rule
+	err := editSchedule(s, seen.ID, func(b *board.State, i int) error {
+		r := &b.Schedules[i]
+		if r.TimingKind() != seen.TimingKind() || r.TimingValue() != seen.TimingValue() || r.Prompt != seen.Prompt || r.Agent != seen.Agent {
+			conflict = r
+			return errors.New("別のペインで予定が変更されました。最新の設定を確認してください")
 		}
-		r.Prompt = prompt
+		if err := setPrompt(r, prompt); err != nil {
+			return err
+		}
+		if timing != r.TimingValue() {
+			if err := r.SetTiming(r.TimingKind(), timing, time.Now()); err != nil {
+				return err
+			}
+		}
+		r.Agent = agent
 		return nil
 	})
+	return conflict, err
 }
 
 func Remove(s store.Store, id int) error {

@@ -43,14 +43,7 @@ func (u *boardUI) inputKey(event *tcell.EventKey) *tcell.EventKey {
 }
 
 func (u *boardUI) editCommand(initial string) {
-	label := "> "
-	switch initial {
-	case "daily ":
-		label = "時刻 HH:MM と作業内容 > "
-	case "every ":
-		label = "間隔（例 15m）と作業内容 > "
-	}
-	u.openInput(label, initial, func(value string) {
+	u.openInput("> ", initial, func(value string) {
 		dir := u.editor.dir
 		cmd := command.Parse(value)
 		cmd.Agent = u.editor.agent
@@ -95,30 +88,12 @@ func (u *boardUI) editScheduleTiming(r schedule.Rule) {
 	if r.TimingKind() == schedule.Every {
 		label = "間隔（例 15m）"
 	}
-	u.openScheduleEditor(r.ID, label, r.TimingValue(), func(value string) error {
-		err := scheduler.ChangeTiming(u.store, r, value)
-		var conflict *scheduler.TimingConflict
-		if errors.As(err, &conflict) {
-			u.editScheduleTiming(conflict.Current)
-		}
-		return err
-	})
-}
-
-func (u *boardUI) editSchedulePrompt(r schedule.Rule) {
-	u.openScheduleEditor(r.ID, "実行内容", r.Prompt, func(value string) error {
-		err := scheduler.ChangePrompt(u.store, r, value)
-		var conflict *scheduler.PromptConflict
-		if errors.As(err, &conflict) {
-			u.editSchedulePrompt(conflict.Current)
-		}
-		return err
-	})
-}
-
-func (u *boardUI) openScheduleEditor(id int, label, initial string, save func(string) error) {
-	u.openInput(fmt.Sprintf("#%d %s > ", id, label), initial, func(value string) {
-		if err := save(value); err != nil {
+	u.openInput(fmt.Sprintf("#%d %s > ", r.ID, label), r.TimingValue(), func(value string) {
+		if err := scheduler.ChangeTiming(u.store, r, value); err != nil {
+			var conflict *scheduler.TimingConflict
+			if errors.As(err, &conflict) {
+				u.editScheduleTiming(conflict.Current)
+			}
 			u.notice.SetText(err.Error())
 			return
 		}

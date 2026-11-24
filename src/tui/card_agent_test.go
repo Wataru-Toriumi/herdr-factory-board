@@ -32,8 +32,9 @@ func TestAgentSelectionForCardsAndSchedules(t *testing.T) {
 	press(tcell.KeyBacktab)
 	key('i')
 	press(tcell.KeyCtrlG)
-	u.input.SetText("every 1m 定期タスク")
-	press(tcell.KeyEnter)
+	u.scheduleForm.timing.SetText("1m")
+	u.scheduleForm.prompt.SetText("定期タスク", true)
+	press(tcell.KeyCtrlS)
 	press(tcell.KeyEnter)
 	if !strings.Contains(u.detail.GetText(false), "Claude Code") {
 		t.Fatalf("予定の担当: %s", u.detail.GetText(false))

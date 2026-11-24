@@ -15,7 +15,7 @@ const (
 	ReopenCard
 	ChangeScheduleAgent
 	EditTiming
-	EditSchedulePrompt
+	EditScheduleSettings
 )
 
 type Shortcut struct {
@@ -31,7 +31,7 @@ func Shortcuts(card *board.Card, includeSchedule bool) ShortcutList {
 	if includeSchedule {
 		if card == nil {
 			shortcuts = append(shortcuts,
-				Shortcut{'e', "実行内容を編集", EditSchedulePrompt},
+				Shortcut{'e', "予定を編集", EditScheduleSettings},
 				Shortcut{'g', "担当を変更", ChangeScheduleAgent},
 			)
 		}

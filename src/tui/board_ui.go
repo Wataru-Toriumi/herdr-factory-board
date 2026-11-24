@@ -28,6 +28,7 @@ type boardUI struct {
 	footer                                *tview.Pages
 	workDir                               string
 	editor                                inputSession
+	scheduleForm                          *scheduleForm
 	projects                              []string
 	detailScheduleID                      int
 	detailBody                            string
@@ -94,7 +95,15 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 }
 
 func Run(s store.Store, herdr string) error {
-	return newBoardUI(s, herdr).run()
+	screen, err := tcell.NewScreen()
+	if err != nil {
+		return err
+	}
+	u := newBoardUI(s, herdr)
+	if err := setBoardScreen(u.app, screen); err != nil {
+		return err
+	}
+	return u.run()
 }
 
 func (u *boardUI) run() error {
@@ -129,6 +138,11 @@ func (u *boardUI) selectedCard() (board.Card, bool) {
 }
 
 func (u *boardUI) showWorkDir() {
+	if u.activePage() == "schedule-form" {
+		f := u.scheduleForm
+		u.context.SetText("担当: " + board.AgentLabel(f.agent) + "（Ctrl+G 切替）  作業先: " + f.rule.Dir)
+		return
+	}
 	if u.activePage() == "directory" {
 		return
 	}
