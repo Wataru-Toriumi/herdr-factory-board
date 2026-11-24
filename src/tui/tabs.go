@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -16,15 +17,16 @@ const (
 type tabView struct {
 	page, label, hint string
 	body              tview.Primitive
+	handleKey         func(*tcell.EventKey) bool
 }
 
 func (u *boardUI) registerTabs() {
 	u.tabs = []tabView{
-		taskTab: {page: "tasks", label: "タスク", body: u.columns,
+		taskTab: {page: "tasks", label: "タスク", body: u.columns, handleKey: u.taskListKey,
 			hint: "v 詳細  n 追加  p プロジェクト  ? ヘルプ  Tab 切替  ←→ 列  ↑↓ 選択  Enter 操作  q 閉じる"},
-		agentTab: {page: "agents", label: "エージェント", body: u.agents,
+		agentTab: {page: "agents", label: "エージェント", body: u.agents, handleKey: u.agentListKey,
 			hint: "Tab 切替   ↑↓ 選択   Enter ペインへ   ? ヘルプ   q 閉じる"},
-		automationTab: {page: "automation", label: "自動化", body: u.schedules,
+		automationTab: {page: "automation", label: "自動化", body: u.schedules, handleKey: u.scheduleListKey,
 			hint: "n 毎日  i 間隔  t 変更  p プロジェクト  ↑↓ 選択  Enter 詳細  x 解除  Tab 切替  ? ヘルプ"},
 	}
 	for i, tab := range u.tabs {

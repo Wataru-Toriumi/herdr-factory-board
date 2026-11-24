@@ -4,6 +4,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/application/worker"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
+	"github.com/gdamore/tcell/v2"
 )
 
 type agentList struct {
@@ -22,4 +23,16 @@ func (u *boardUI) focusAgent(row agentlist.Row) error {
 		return worker.Focus(u.store, u.herdr, row.CardID)
 	}
 	return herdr.FocusAgent(u.herdr, row.Pane)
+}
+
+func (u *boardUI) agentListKey(event *tcell.EventKey) bool {
+	if event.Key() != tcell.KeyEnter {
+		return false
+	}
+	if row, ok := u.agents.selected(); ok {
+		if err := u.focusAgent(row); err != nil {
+			u.notice.SetText(err.Error())
+		}
+	}
+	return true
 }

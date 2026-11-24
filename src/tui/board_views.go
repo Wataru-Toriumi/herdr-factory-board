@@ -43,3 +43,39 @@ func (u *boardUI) selectLane(lane int) {
 		list.SetBorderColor(border)
 	}
 }
+
+func (u *boardUI) taskListKey(event *tcell.EventKey) bool {
+	switch event.Key() {
+	case tcell.KeyLeft:
+		u.selectLane((u.lane + len(taskLanes) - 1) % len(taskLanes))
+	case tcell.KeyRight:
+		u.selectLane((u.lane + 1) % len(taskLanes))
+	case tcell.KeyEnter:
+		u.activateCard()
+	case tcell.KeyRune:
+		if event.Rune() != 'v' {
+			return false
+		}
+		if c, ok := u.selectedCard(); ok {
+			u.execute(fmt.Sprintf("result %d", c.ID))
+		}
+	default:
+		return false
+	}
+	return true
+}
+
+func (u *boardUI) activateCard() {
+	c, ok := u.selectedCard()
+	if !ok {
+		return
+	}
+	action := "result"
+	switch c.Status {
+	case board.Todo:
+		action = "start"
+	case board.Running:
+		action = "open"
+	}
+	u.execute(fmt.Sprintf("%s %d", action, c.ID))
+}
