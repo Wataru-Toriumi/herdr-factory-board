@@ -10,11 +10,12 @@ import (
 )
 
 type State struct {
-	NextID    int
-	Dir       string
-	Cards     []Card
-	Schedules []schedule.Rule
-	Projects  []string `json:",omitempty"`
+	DefaultAgent string `json:",omitempty"`
+	NextID       int
+	Dir          string
+	Cards        []Card
+	Schedules    []schedule.Rule
+	Projects     []string `json:",omitempty"`
 }
 
 func (b *State) allocateID() int {

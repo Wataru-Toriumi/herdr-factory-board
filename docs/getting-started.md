@@ -3,7 +3,7 @@
 macOS または Linux で、Herdr 0.7.0 以降と Go 1.21 以降を使用します。macOS では音声入力ヘルパーのビルドに Xcode Command Line Tools（`xcode-select --install`）も使います。Go と Swift コンパイラが必要なのはビルド時だけです。
 Herdr のペインで、使いたいエージェントの CLI を起動できるようにします。
 
-- **Codex（既定）** は対象の Git リポジトリで `codex exec` を使えるよう認証し、作業に必要な書き込みを許可してください。
+- **Codex（初期設定）** は対象の Git リポジトリで `codex exec` を使えるよう認証し、作業に必要な書き込みを許可してください。
 - **Claude Code** は同じ環境で `claude` の認証を済ませてください。ワーカーは非対話モードで起動します。設計には読み取り・検索ツールだけを渡し、直接実行と実装では Claude Code に設定した権限を使います。編集やテストに必要な操作を事前に許可してください。[Claude Code の非対話実行](https://code.claude.com/docs/en/headless)
 
 Herdr のセッション内で、このプラグインのリポジトリのルートから実行します。

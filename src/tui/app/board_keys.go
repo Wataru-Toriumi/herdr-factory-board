@@ -5,6 +5,8 @@ import "github.com/gdamore/tcell/v2"
 func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	key := event.Key()
 	switch u.activePage() {
+	case "default-agent":
+		return event
 	case "directory":
 		if key == tcell.KeyEscape {
 			u.closeDirectory()
@@ -58,6 +60,8 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	switch key {
+	case tcell.KeyCtrlG:
+		u.pickDefaultAgent()
 	case tcell.KeyTab, tcell.KeyBacktab:
 		step := 1
 		if key == tcell.KeyBacktab {
