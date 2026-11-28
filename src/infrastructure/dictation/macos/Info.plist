@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>dev.wataru-toriumi.factory-board.dictation</string>
+    <key>CFBundleName</key>
+    <string>Factory Board</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>フォームの音声入力中にマイクを使います。</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>話した内容をこのMacで日本語のテキストに変換します。</string>
+</dict>
+</plist>

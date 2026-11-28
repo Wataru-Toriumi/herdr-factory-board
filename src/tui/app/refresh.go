@@ -75,6 +75,7 @@ func (u *boardUI) applyRefresh(b boardSnapshot, session sessionSnapshot) {
 		u.spaces = session.spaces
 	}
 	u.renderBoard(b)
+	u.updateVoiceInput()
 
 	// バックグラウンドの通知で、直前の操作結果を上書きしない。
 	message := ""

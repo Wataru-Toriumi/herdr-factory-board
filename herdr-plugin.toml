@@ -6,7 +6,7 @@ description = "Run manual and scheduled Codex or Claude Code tasks from a worksp
 platforms = ["macos", "linux"]
 
 [[build]]
-command = ["go", "build", "-o", "factory-board", "./src"]
+command = ["sh", "scripts/build.sh"]
 
 [[actions]]
 id = "open-board"

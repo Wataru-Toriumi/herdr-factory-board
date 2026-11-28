@@ -1,6 +1,6 @@
 # ローカルで起動する
 
-macOS または Linux で、Herdr 0.7.0 以降と Go 1.21 以降を使用します。Go が必要なのはビルド時だけです。
+macOS または Linux で、Herdr 0.7.0 以降と Go 1.21 以降を使用します。macOS では音声入力ヘルパーのビルドに Xcode Command Line Tools（`xcode-select --install`）も使います。Go と Swift コンパイラが必要なのはビルド時だけです。
 Herdr のペインで、使いたいエージェントの CLI を起動できるようにします。
 
 - **Codex（既定）** は対象の Git リポジトリで `codex exec` を使えるよう認証し、作業に必要な書き込みを許可してください。
@@ -9,7 +9,7 @@ Herdr のペインで、使いたいエージェントの CLI を起動できる
 Herdr のセッション内で、このプラグインのリポジトリのルートから実行します。
 
 ```sh
-go build -o factory-board ./src
+sh scripts/build.sh
 herdr plugin link "$PWD"
 herdr plugin pane open --plugin wataru-toriumi.factory-board --entrypoint board
 ```

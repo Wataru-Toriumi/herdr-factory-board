@@ -14,13 +14,14 @@ func (u *boardUI) newTaskForm() {
 		u.notice.SetText("")
 		u.closeTaskForm()
 	})
+	u.addVoiceButton(u.taskForm.Form, u.taskForm.Prompt)
 	u.pages.AddAndSwitchToPage("task-form", u.taskForm, true)
 	u.notice.SetText("")
 	u.focusTaskForm()
 }
 
 func (u *boardUI) focusTaskForm() {
-	u.hint.SetText(taskboard.FormHint)
+	u.hint.SetText(u.voiceHint(taskboard.FormHint))
 	u.showWorkDir()
 	u.app.EnablePaste(true).SetFocus(u.taskForm)
 }
