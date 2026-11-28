@@ -22,7 +22,7 @@ func Reopen(s store.Store, seen board.Card) error {
 // カードの照合と状態変更は、同じ保存ロックの内側で行う。
 func applyCardAction(s store.Store, seen board.Card, apply func(*board.Card) bool, rejection string) error {
 	return s.EditCard(seen.ID, func(c *board.Card) error {
-		if *c != seen || !apply(c) {
+		if !c.Equal(seen) || !apply(c) {
 			return errors.New(rejection)
 		}
 		return nil

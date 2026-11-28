@@ -16,6 +16,8 @@ const (
 	ChangeScheduleAgent
 	EditTiming
 	EditScheduleSettings
+	OpenChat
+	ApplyChat
 )
 
 type Shortcut struct {
@@ -53,6 +55,16 @@ func cardShortcuts(c *board.Card) ShortcutList {
 		return nil
 	}
 	var shortcuts ShortcutList
+	if c.CanChat() {
+		shortcuts = append(shortcuts, Shortcut{'c', "会話", OpenChat})
+	}
+	if c.CanApplyChat() {
+		label := "会話で設計を更新"
+		if c.CanReviewResult() {
+			label = "会話で実装を修正"
+		}
+		shortcuts = append(shortcuts, Shortcut{'f', label, ApplyChat})
+	}
 	if c.CanCancel() {
 		shortcuts = append(shortcuts, Shortcut{'x', "キャンセル", CancelCard})
 	}

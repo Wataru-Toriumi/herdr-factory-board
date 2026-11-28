@@ -31,7 +31,7 @@ func TestChangeCardProjectRejectsStaleSelection(t *testing.T) {
 	}
 	want := seen
 	want.Dir = "/web"
-	if *got != want {
+	if !got.Equal(want) {
 		t.Fatalf("保存されたカード = %+v, 期待値 = %+v", *got, want)
 	}
 }

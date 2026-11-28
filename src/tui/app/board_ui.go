@@ -3,6 +3,8 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/dictation"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
@@ -33,6 +35,8 @@ type boardUI struct {
 	editor                        inputSession
 	scheduleForm                  *automation.Form
 	taskForm                      *taskboard.Form
+	chatForm                      *tview.Form
+	chatInput                     *tview.TextArea
 	voice                         *voiceDialog
 	voiceHelper                   string
 	projects                      []string
@@ -121,6 +125,10 @@ func (u *boardUI) activePage() string {
 
 func (u *boardUI) showWorkDir() {
 	switch u.activePage() {
+	case "chat":
+		c := u.detail.Card()
+		u.context.SetText(fmt.Sprintf("#%d  元の依頼: %s", c.ID, strings.Join(strings.Fields(c.Prompt), " ")))
+		return
 	case "task-form":
 		u.context.SetText(u.taskForm.Context())
 		return

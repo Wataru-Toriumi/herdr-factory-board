@@ -39,7 +39,7 @@ func (v *View) Open(title, body string, scheduleID int, card *board.Card) {
 
 func (v *View) Refresh(b board.State) {
 	if v.card != nil {
-		if c, err := b.FindCard(v.card.ID); err == nil && *c != *v.card {
+		if c, err := b.FindCard(v.card.ID); err == nil && !c.Equal(*v.card) {
 			card := *c
 			v.card = &card
 			v.body = CardText(card)

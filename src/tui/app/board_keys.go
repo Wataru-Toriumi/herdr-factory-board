@@ -34,6 +34,8 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		return u.scheduleForm.HandleKey(event)
+	case "chat":
+		return u.chatKey(event)
 	case "input":
 		return u.inputKey(event)
 	case "detail":

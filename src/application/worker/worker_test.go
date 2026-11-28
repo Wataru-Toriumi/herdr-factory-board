@@ -64,7 +64,7 @@ func TestRecoverInterruptedCard(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(b.Cards) != 1 || b.Cards[0] != want {
+			if len(b.Cards) != 1 || !b.Cards[0].Equal(want) {
 				t.Fatalf("復旧後のカード = %+v, 期待値 = %+v", b.Cards, want)
 			}
 		})

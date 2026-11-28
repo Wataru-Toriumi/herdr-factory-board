@@ -77,7 +77,7 @@ func TestAgentChangeRejectsStaleCardDetail(t *testing.T) {
 	}
 	want := seen
 	want.Dir = "/web"
-	if *u.detail.Card() != want {
+	if !u.detail.Card().Equal(want) {
 		t.Fatalf("変更後のカード = %+v, 期待値 = %+v", *u.detail.Card(), want)
 	}
 }

@@ -8,6 +8,10 @@ func (c *Card) QueueAttempt() int {
 		// 再オープン前の記録は、新しい作業を開始するまで詳細画面に残す。
 		c.Design, c.Feedback, c.ImplementationFeedback, c.PreviousResult = "", "", "", ""
 	}
+	c.AttemptChatTurns = len(c.Chat)
+	if c.AttemptChatTurns > 0 && c.Chat[c.AttemptChatTurns-1].Pending() {
+		c.AttemptChatTurns--
+	}
 	c.Attempt++
 	c.Status, c.Pane, c.Result = Starting, "", ""
 	return c.Attempt

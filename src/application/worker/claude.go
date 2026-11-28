@@ -11,7 +11,7 @@ import (
 
 func runClaude(ctx context.Context, task board.Card, lock *os.File) (string, string) {
 	args := []string{"-p", "--output-format", "stream-json", "--verbose"}
-	if task.Phase == board.DesignPhase {
+	if task.Phase == board.DesignPhase || task.Phase == chatPhase {
 		args = append(args, "--tools", "Read,Glob,Grep", "--disallowedTools", "mcp__*")
 	}
 	cmd := agentCommand(ctx, task, lock, "claude", args...)
