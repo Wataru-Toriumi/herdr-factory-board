@@ -21,7 +21,7 @@ func (s Store) ChangeCardAgent(seen board.Card, agent string) error {
 // 画面に表示したカードと保存済みのカードをロック内で照合し、別ペインでの更新を保護する。
 func (s Store) editCardConfig(seen board.Card, conflictMessage string, change func(*board.Card)) error {
 	return s.EditCard(seen.ID, func(c *board.Card) error {
-		if *c != seen || !c.CanConfigure() {
+		if !c.Equal(seen) || !c.CanConfigure() {
 			return errors.New(conflictMessage)
 		}
 		change(c)

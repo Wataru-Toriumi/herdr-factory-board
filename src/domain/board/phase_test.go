@@ -16,7 +16,7 @@ func TestPreparePhaseRejectsBlankReviewFeedback(t *testing.T) {
 			if err == nil || err.Error() != tc.want {
 				t.Fatalf("エラー = %v, 期待値 = %q", err, tc.want)
 			}
-			if card != tc.card {
+			if !card.Equal(tc.card) {
 				t.Fatalf("コメント拒否後にカードが変更されました: %+v", card)
 			}
 		})

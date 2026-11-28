@@ -1,6 +1,7 @@
 package board
 
 import (
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -22,14 +23,19 @@ type Card struct {
 	Agent                       string `json:",omitempty"`
 	Attempt                     int
 	Pane, Result                string
-	ScheduleID                  int    `json:",omitempty"`
-	Phase                       string `json:",omitempty"`
-	Design                      string `json:",omitempty"`
-	Feedback                    string `json:",omitempty"`
-	ImplementationFeedback      string `json:",omitempty"`
-	PreviousResult              string `json:",omitempty"`
-	ReopenCount                 int    `json:",omitempty"`
+	ScheduleID                  int        `json:",omitempty"`
+	Phase                       string     `json:",omitempty"`
+	Design                      string     `json:",omitempty"`
+	Feedback                    string     `json:",omitempty"`
+	ImplementationFeedback      string     `json:",omitempty"`
+	PreviousResult              string     `json:",omitempty"`
+	AttemptChatTurns            int        `json:",omitempty"`
+	Chat                        []ChatTurn `json:",omitempty"`
+	ReopenCount                 int        `json:",omitempty"`
 }
+
+// Equal は会話も含め、画面で確認したカードと保存された版を照合する。
+func (c Card) Equal(other Card) bool { return reflect.DeepEqual(c, other) }
 
 func (c Card) CanCancel() bool {
 	switch c.Status {

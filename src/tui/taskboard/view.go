@@ -69,7 +69,9 @@ func (v *View) Render(cards []board.Card, projects []string, dir string) {
 	for _, lane := range v.columns {
 		rows := model.Rows[lane]
 		list := v.lists[lane]
-		if !slices.Equal(list.Rows(), rows) {
+		if !slices.EqualFunc(list.Rows(), rows, func(a, b Row) bool {
+			return a.project == b.project && a.Card.Equal(b.Card)
+		}) {
 			index := list.GetCurrentItem()
 			if lane == model.SelectedLane && model.SelectedRow >= 0 {
 				index = model.SelectedRow

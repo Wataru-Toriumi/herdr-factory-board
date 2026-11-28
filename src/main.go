@@ -24,6 +24,8 @@ func run() error {
 		return tui.Run(s, herdr)
 	}
 	switch os.Args[1] {
+	case "chat-reply":
+		return worker.RunChatReply(s, os.Args[2:])
 	case "worker":
 		return worker.Run(s)
 	case "scheduler":

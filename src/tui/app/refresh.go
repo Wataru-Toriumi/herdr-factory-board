@@ -105,8 +105,11 @@ func (u *boardUI) renderBoard(snapshot boardSnapshot) {
 	b := u.board.state
 	u.projects = b.ProjectDirs()
 	u.schedules.Render(b.Schedules, u.workDir, u.board.active, u.board.schedulerErr)
-	if u.activePage() == "detail" {
+	switch u.activePage() {
+	case "detail":
 		u.detail.Refresh(b)
+	case "chat":
+		u.refreshChat(b)
 	}
 	u.tasks.Render(b.Cards, u.projects, u.workDir)
 	u.history.Render(b.Cards, u.projects, u.workDir)

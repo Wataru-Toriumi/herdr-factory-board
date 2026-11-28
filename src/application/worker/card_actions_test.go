@@ -34,7 +34,7 @@ func TestCardActionsRejectStaleResult(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(b.Cards) != 1 || b.Cards[0] != current {
+			if len(b.Cards) != 1 || !b.Cards[0].Equal(current) {
 				t.Fatalf("競合後のカード = %+v", b.Cards)
 			}
 		})

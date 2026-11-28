@@ -13,11 +13,11 @@ func TestLaunchUpdatesOnlyAffectCurrentStartingAttempt(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			card := tc.card
-			if card.MarkAttemptRunning(1, "別のペイン") || card != tc.card {
+			if card.MarkAttemptRunning(1, "別のペイン") || !card.Equal(tc.card) {
 				t.Fatalf("無効な起動要求が反映されました: %+v", card)
 			}
 			card.FailAttemptLaunch(1, "起動失敗")
-			if card != tc.card {
+			if !card.Equal(tc.card) {
 				t.Fatalf("遅れて届いた起動失敗が反映されました: %+v", card)
 			}
 		})
@@ -36,7 +36,7 @@ func TestFinishAttemptIgnoresObsoleteResult(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			card := tc.card
 			card.FinishAttempt(1, DesignPhase, Done, "遅れて届いた設計案")
-			if card != tc.card {
+			if !card.Equal(tc.card) {
 				t.Fatalf("遅れて届いた結果でカードが変更されました: %+v", card)
 			}
 		})

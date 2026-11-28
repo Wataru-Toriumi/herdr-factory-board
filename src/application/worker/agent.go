@@ -60,6 +60,9 @@ func agentOutcome(ctx context.Context, phase, result string, runErr error) (stri
 		return board.Failed, strings.TrimSpace(result + "\n" + runErr.Error())
 	}
 	if result == "" {
+		if phase == chatPhase {
+			return board.Failed, "回答を取得できませんでした"
+		}
 		if phase == board.DesignPhase {
 			return board.Failed, "設計案を取得できませんでした"
 		}
@@ -69,20 +72,30 @@ func agentOutcome(ctx context.Context, phase, result string, runErr error) (stri
 }
 
 func workerPrompt(c board.Card) string {
+	// 作業を依頼した時点より後の相談は、進行中の作業に混ぜない。
+	discussionContext := ""
+	if c.Phase != chatPhase && c.AttemptChatTurns > 0 {
+		c.Chat = c.Chat[:min(c.AttemptChatTurns, len(c.Chat))]
+		if discussion := c.Discussion(); discussion != "" {
+			discussionContext = "\n\n作業依頼時の会話（検討の経緯。設計案と最新の依頼を優先）\n" + discussion
+		}
+	}
 	switch c.Phase {
+	case chatPhase:
+		return chatPrompt(c)
 	case board.DesignPhase:
 		prompt := "リポジトリを調査して設計案を作成してください。実装やファイル変更は行わず、変更方針、受け入れ条件、テスト方針、未決事項を最終メッセージにまとめてください。\n\n元の依頼\n" + c.Prompt
 		if c.Design != "" {
 			prompt += "\n\n前回の設計案\n" + c.Design + "\n\nレビューコメント\n" + c.Feedback
 		}
-		return prompt
+		return prompt + discussionContext
 	case board.ImplementationPhase:
 		prompt := fmt.Sprintf("承認された設計案に沿って実装し、テスト結果を報告してください。\n\n元の依頼\n%s\n\n承認済みの設計案\n%s", c.Prompt, c.Design)
 		if c.ImplementationFeedback != "" {
 			prompt += "\n\n前回の実装結果\n" + c.PreviousResult + "\n\n以下のレビュー指摘に対応してください\n" + c.ImplementationFeedback
 		}
-		return prompt
+		return prompt + discussionContext
 	default:
-		return c.Prompt
+		return c.Prompt + discussionContext
 	}
 }

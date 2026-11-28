@@ -22,6 +22,10 @@ func (u *boardUI) openDetail(title, body string, scheduleID int, card *board.Car
 
 func (u *boardUI) runDetailAction(action detail.Action) {
 	switch action {
+	case detail.OpenChat:
+		u.openChat()
+	case detail.ApplyChat:
+		u.launchDetailPhase(u.detail.Card().Phase, "チケットの会話で合意した内容を反映してください。")
 	case detail.CancelCard:
 		u.cancelDetailCard()
 	case detail.ChangeCardAgent:

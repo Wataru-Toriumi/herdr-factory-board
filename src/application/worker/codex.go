@@ -9,7 +9,7 @@ import (
 
 func runCodex(ctx context.Context, task board.Card, lock *os.File, resultPath string) (string, string) {
 	args := []string{"exec", "--output-last-message", resultPath}
-	if task.Phase == board.DesignPhase {
+	if task.Phase == board.DesignPhase || task.Phase == chatPhase {
 		args = append(args, "--sandbox", "read-only")
 	}
 	cmd := agentCommand(ctx, task, lock, "codex", append(args, "-")...)
