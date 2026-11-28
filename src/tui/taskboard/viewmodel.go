@@ -20,17 +20,23 @@ type ViewModel struct {
 	SelectedRow int
 }
 
-func Build(cards []board.Card, projects []string, workDir string, currentLane, selectedID int) ViewModel {
+func (mode Mode) Build(cards []board.Card, projects []string, workDir string, currentLane, selectedID int) ViewModel {
 	model := ViewModel{SelectedLane: currentLane, SelectedRow: -1}
 	var names map[string]string
 	if workDir == "" {
 		names = projectNames(projects)
 	}
-	for _, card := range cards {
+	for i := range cards {
+		// 履歴は追加順を逆にたどり、各列の先頭に新しい実行を置く。
+		index := i
+		if mode == RunHistory {
+			index = len(cards) - 1 - i
+		}
+		card := cards[index]
 		if workDir != "" && card.Dir != workDir {
 			continue
 		}
-		lane := LaneFor(card)
+		lane := mode.laneFor(card)
 		if lane < 0 {
 			continue
 		}
@@ -50,6 +56,11 @@ func (row Row) Labels() (string, string) {
 	}
 	if c.Source != "" {
 		label += "  " + c.Source
+	} else if c.ScheduleID > 0 {
+		label += fmt.Sprintf("  定期 #%d", c.ScheduleID)
+	}
+	if c.Status == board.Todo && c.SourceScheduleID() > 0 {
+		label += "  起動待ち"
 	}
 	if c.Status == board.Starting {
 		label += "  起動中"

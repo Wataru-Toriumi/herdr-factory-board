@@ -28,7 +28,13 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		}
 		return event
 	}
-	if u.tabs[u.tab].handleKey(event) {
+	if u.tab == automationTab && key == tcell.KeyRune && event.Rune() == 'h' {
+		u.showHistory = !u.showHistory
+		u.notice.SetText("")
+		u.switchView()
+		return nil
+	}
+	if u.currentView().handleKey(event) {
 		return nil
 	}
 	switch key {
@@ -44,9 +50,11 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 		// レーンを持たない一覧でも左右キーはここで消費する。
 		return nil
 	case tcell.KeyRune:
-		switch event.Rune() {
-		case 'n':
+		if event.Rune() == 'n' && u.tab != automationTab {
 			u.newTaskForm()
+			return nil
+		}
+		switch event.Rune() {
 		case 'p':
 			u.pickProject(u.workDir, true, func(dir string) {
 				u.workDir = dir

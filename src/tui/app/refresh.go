@@ -108,6 +108,7 @@ func (u *boardUI) renderBoard(snapshot boardSnapshot) {
 		u.detail.Refresh(b)
 	}
 	u.tasks.Render(b.Cards, u.projects, u.workDir)
+	u.history.Render(b.Cards, u.projects, u.workDir)
 	if u.board.schedulerErr != nil {
 		u.notice.SetText(u.board.schedulerErr.Error())
 	}

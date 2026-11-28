@@ -16,3 +16,17 @@ var taskLanes = [LaneCount]struct {
 	Done:             {"完了", tcell.ColorLightGreen},
 	FailedOrCanceled: {"失敗・中止", tcell.ColorLightCoral},
 }
+
+type Mode int
+
+const (
+	Manual Mode = iota
+	RunHistory
+)
+
+func (mode Mode) columns() []int {
+	if mode == RunHistory {
+		return []int{Work, Done, FailedOrCanceled}
+	}
+	return []int{Todo, Design, DesignComplete, Work, Review, Done, FailedOrCanceled}
+}
