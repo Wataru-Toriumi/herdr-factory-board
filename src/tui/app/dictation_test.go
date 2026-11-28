@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/gdamore/tcell/v2"
@@ -21,6 +22,7 @@ func TestDictationForms(t *testing.T) {
 		want   string
 	}{
 		{"新規タスク", "stop", "printf 'ready\\n'; read -r cmd && [ \"$cmd\" = stop ] && printf '日本語'", "前日本語後"},
+		{"チケットの会話", "stop", "printf 'ready\\n'; read -r cmd && [ \"$cmd\" = stop ] && printf '日本語'", "前日本語後"},
 		{"予定の編集", "stop", "printf 'ready\\n'; read -r cmd && [ \"$cmd\" = stop ] && printf '日本語'", "前日本語後"},
 		{"取消", "cancel", "printf 'ready\\n'; read -r cmd", "前文後"},
 		{"許可エラー", "error", "echo 'マイクの許可が必要です' >&2; exit 1", "前文後"},
@@ -33,11 +35,17 @@ func TestDictationForms(t *testing.T) {
 			}
 			var field *tview.TextArea
 			page := "task-form"
-			if tc.name == "予定の編集" {
+			switch tc.name {
+			case "チケットの会話":
+				u.openCardDetail(board.Card{ID: 1, Status: board.Todo})
+				u.openChat()
+				field = u.chatForm.Message.SetText("前文後", true)
+				page = "chat"
+			case "予定の編集":
 				u.openScheduleForm(schedule.Rule{ID: 1, Dir: "/tmp", Prompt: "前文後", Time: "08:00"}, schedule.Daily)
 				field = u.scheduleForm.Prompt
 				page = "schedule-form"
-			} else {
+			default:
 				u.newTaskForm()
 				field = u.taskForm.Prompt.SetText("前文後", true)
 			}

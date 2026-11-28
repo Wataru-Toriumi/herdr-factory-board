@@ -35,8 +35,7 @@ type boardUI struct {
 	editor                        inputSession
 	scheduleForm                  *automation.Form
 	taskForm                      *taskboard.Form
-	chatForm                      *tview.Form
-	chatInput                     *tview.TextArea
+	chatForm                      *detail.ChatForm
 	voice                         *voiceDialog
 	voiceHelper                   string
 	projects                      []string
