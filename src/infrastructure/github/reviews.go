@@ -29,6 +29,11 @@ func RequestedReviews(ctx context.Context) ([]PullRequest, error) {
 	return prs, nil
 }
 
+func PullRequestDiff(ctx context.Context, url string) (string, error) {
+	out, err := run(ctx, "pr", "diff", "--color=never", "--", url)
+	return string(out), err
+}
+
 func OpenPullRequest(ctx context.Context, url string) error {
 	_, err := run(ctx, "pr", "view", "--web", "--", url)
 	return err

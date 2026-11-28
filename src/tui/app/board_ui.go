@@ -27,6 +27,7 @@ type boardUI struct {
 	tasks, history                *taskboard.View
 	reviews                       *reviewlist.List
 	reviewRequests                chan string
+	cancelReviewDiff              context.CancelFunc
 	reviewBusy                    bool
 	reviewStatus                  string
 	showHistory                   bool
@@ -69,7 +70,7 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 	}
 	u.schedules = u.newScheduleList()
 	u.tasks = taskboard.NewView(taskboard.Manual, u.execute, u.focusBoardLane("tasks"))
-	u.reviews = reviewlist.New(func() { u.requestReview("") }, u.requestReview)
+	u.reviews = reviewlist.New(func() { u.requestReview("") }, u.requestReview, u.openReviewDiff)
 	u.history = taskboard.NewView(taskboard.RunHistory, u.execute, u.focusBoardLane("history"))
 	u.agents = agentlist.NewList(u.focusAgent)
 	u.detail = detail.NewView(u.schedules.ByID, func(hint string) { u.hint.SetText(hint) })
@@ -111,6 +112,9 @@ func (u *boardUI) run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer func() {
+		if u.cancelReviewDiff != nil {
+			u.cancelReviewDiff()
+		}
 		if u.voice != nil {
 			u.voice.session.Cancel()
 		}
@@ -145,7 +149,7 @@ func (u *boardUI) showWorkDir() {
 	case "schedule-form":
 		u.context.SetText(u.scheduleForm.Context())
 		return
-	case "directory", "dictation":
+	case "directory", "dictation", "review-diff":
 		return
 	}
 	if u.tab == agentTab {

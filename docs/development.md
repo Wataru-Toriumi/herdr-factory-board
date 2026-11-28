@@ -43,7 +43,7 @@ CI は PR の作成・更新時と `main` への push 時に、Linux と macOS �
 | --- | --- |
 | [taskboard](../src/tui/taskboard) | レーンとカードの描画、画面幅に応じた列数、選択の追従、カードのキー操作、新規タスクフォーム |
 | [agentlist](../src/tui/agentlist) | エージェント一覧、入力待ちの並び順と件数、担当ペインを開く操作 |
-| [reviewlist](../src/tui/reviewlist) | GitHub のレビュー依頼一覧、選んだ PR を開く操作 |
+| [reviewlist](../src/tui/reviewlist) | GitHub のレビュー依頼一覧、PR の差分表示、ブラウザで開く操作 |
 | [detail](../src/tui/detail) | カードと元の予定の詳細、更新時の再描画、状態に応じたショートカットと操作案内 |
 | [automation](../src/tui/automation) | 予定一覧、プロジェクトの絞り込み、稼働状態の表示、登録・編集フォームと時刻入力 |
 | [projectpicker](../src/tui/projectpicker) | 作業先一覧、フォルダ移動、新しい作業先の選択 |

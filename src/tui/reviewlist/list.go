@@ -9,16 +9,17 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-const ListHint = "↑↓ 選択  Enter GitHubで開く  r 更新  Tab 切替  q 閉じる"
+const ListHint = "↑↓ 選択  d 差分  Enter GitHubで開く  r 更新  Tab 切替  q 閉じる"
 
 type List struct {
 	*widgets.RowList[github.PullRequest]
 	refresh func()
 	open    func(string)
+	diff    func(github.PullRequest)
 }
 
-func New(refresh func(), open func(string)) *List {
-	l := &List{RowList: widgets.NewRowList[github.PullRequest](), refresh: refresh, open: open}
+func New(refresh func(), open func(string), diff func(github.PullRequest)) *List {
+	l := &List{RowList: widgets.NewRowList[github.PullRequest](), refresh: refresh, open: open, diff: diff}
 	l.SetTitle(" GitHub のレビュー依頼 ")
 	return l
 }
@@ -35,6 +36,10 @@ func (l *List) HandleKey(event *tcell.EventKey) bool {
 	case event.Key() == tcell.KeyEnter:
 		if pr, ok := l.Selected(); ok {
 			l.open(pr.URL)
+		}
+	case event.Key() == tcell.KeyRune && event.Rune() == 'd':
+		if pr, ok := l.Selected(); ok {
+			l.diff(pr)
 		}
 	case event.Key() == tcell.KeyRune && event.Rune() == 'r':
 		l.refresh()
