@@ -175,7 +175,7 @@ func TestAutomationTabManagesDailySchedule(t *testing.T) {
 	if u.schedules.GetItemCount() != 0 || len(b.Schedules) != 0 {
 		t.Fatal("確定した予定を解除できません")
 	}
-	for _, page := range []string{"tasks", "agents", "automation"} {
+	for _, page := range []string{"tasks", "agents", "reviews", "automation"} {
 		press(tcell.KeyTab)
 		if u.activePage() != page {
 			t.Fatalf("タブ切替後のページ = %q, 期待値 = %q", u.activePage(), page)
