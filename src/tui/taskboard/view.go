@@ -97,15 +97,19 @@ func (v *View) selectLane(lane int) {
 	}
 }
 
+func (v *View) moveLane(step int) {
+	count := len(v.columns)
+	current := slices.Index(v.columns, v.lane)
+	next := (current + step + count) % count
+	v.selectLane(v.columns[next])
+}
+
 func (v *View) HandleKey(event *tcell.EventKey) bool {
 	switch event.Key() {
-	case tcell.KeyLeft, tcell.KeyRight:
-		step := 1
-		if event.Key() == tcell.KeyLeft {
-			step = -1
-		}
-		index := slices.Index(v.columns, v.lane)
-		v.selectLane(v.columns[(index+step+len(v.columns))%len(v.columns)])
+	case tcell.KeyLeft:
+		v.moveLane(-1)
+	case tcell.KeyRight:
+		v.moveLane(1)
 	case tcell.KeyEnter:
 		v.activateCard()
 	case tcell.KeyRune:
@@ -127,12 +131,10 @@ func (v *View) activateCard() {
 		return
 	}
 	action := "result"
-	switch c.Status {
-	case board.Todo:
-		if v.mode == Manual {
-			action = "start"
-		}
-	case board.Running:
+	switch {
+	case c.Status == board.Todo && v.mode == Manual:
+		action = "start"
+	case c.Status == board.Running:
 		action = "open"
 	}
 	v.execute(fmt.Sprintf("%s %d", action, c.ID))
