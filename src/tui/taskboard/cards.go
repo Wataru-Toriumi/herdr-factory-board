@@ -15,9 +15,9 @@ var (
 
 func (v *View) Draw(screen tcell.Screen) {
 	v.Flex.Draw(screen)
-	for lane, list := range v.lists {
+	for _, lane := range v.columns {
 		if !v.compact || lane == v.lane {
-			drawCards(screen, list, taskLanes[lane].color)
+			drawCards(screen, v.lists[lane], taskLanes[lane].color)
 		}
 	}
 }

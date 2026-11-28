@@ -9,7 +9,6 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
-	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/terminal"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -328,9 +327,8 @@ func TestTimingFromTaskDetail(t *testing.T) {
 		t.Fatalf("保存後のタスク詳細: %s", text)
 	}
 	press(tcell.KeyEscape)
-	for i := taskboard.Todo; i < taskboard.Work; i++ {
-		press(tcell.KeyRight)
-	}
+	press(tcell.KeyBacktab)
+	key('h')
 	key('v')
 	key('t')
 	u.input.SetText("30m")
@@ -360,7 +358,7 @@ func TestTimingFromTaskDetail(t *testing.T) {
 	}
 
 	press(tcell.KeyEscape)
-	press(tcell.KeyBacktab)
+	key('h')
 	press(tcell.KeyEnter)
 	key('t')
 	if u.input.GetText() != "08:00" {

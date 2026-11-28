@@ -17,7 +17,8 @@ func (u *boardUI) help() {
 	fmt.Fprintln(&text, "dir 絶対パス / add 作業内容 / daily HH:MM 作業内容 / every 15m 作業内容")
 	fmt.Fprintln(&text, "start 番号 / open 番号 / result 番号 / recover 番号")
 	fmt.Fprintln(&text, "scheduler / remove 定期番号")
-	fmt.Fprintln(&text, "自動化タブでは n で毎日、i で間隔指定の登録フォームを開きます。t で時刻・間隔の変更、Enter で詳細、x で解除。")
+	fmt.Fprintln(&text, "自動化タブは h で予定と実行履歴を切り替えます。履歴は Enter で担当ペイン・結果を開き、v で詳細を確認できます。")
+	fmt.Fprintln(&text, "予定では n で毎日、i で間隔指定の登録フォームを開きます。t で時刻・間隔の変更、Enter で詳細、x で解除。")
 	fmt.Fprintln(&text, "定期実行の詳細では e で設定を編集。実行内容は Enter で改行、Ctrl+S で保存します。変更は次に作成されるカードから反映されます。")
 	fmt.Fprintln(&text, "\nワークスペース")
 	for _, w := range u.spaces {

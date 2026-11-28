@@ -19,7 +19,7 @@ func TestLongCardTitleFitsLane(t *testing.T) {
 			}
 			defer screen.Fini()
 			screen.SetSize(width, 6)
-			v := NewView(nil, func(tview.Primitive) {})
+			v := NewView(Manual, nil, func(tview.Primitive) {})
 			v.Resize(width)
 			v.SetRect(0, 0, width, 6)
 			v.Render([]board.Card{{ID: 1, Status: board.Todo, Prompt: strings.Repeat("あ", width)}}, nil, "")
@@ -41,7 +41,7 @@ func TestCardHighlightFollowsSelectionAndScroll(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(40, 6)
-	v := NewView(nil, func(tview.Primitive) {})
+	v := NewView(Manual, nil, func(tview.Primitive) {})
 	v.Resize(40)
 	v.SetRect(0, 0, 40, 6)
 	v.Render([]board.Card{

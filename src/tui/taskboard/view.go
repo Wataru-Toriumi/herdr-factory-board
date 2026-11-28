@@ -14,6 +14,8 @@ const ListHint = "v 詳細  n 追加  p プロジェクト  ? ヘルプ  Tab 切
 
 type View struct {
 	*tview.Flex
+	mode      Mode
+	columns   []int
 	lists     [LaneCount]*widgets.RowList[Row]
 	lane      int
 	compact   bool
@@ -21,11 +23,12 @@ type View struct {
 	focusLane func(tview.Primitive)
 }
 
-func NewView(execute func(string), focusLane func(tview.Primitive)) *View {
-	v := &View{Flex: tview.NewFlex(), execute: execute, focusLane: focusLane}
-	for i, lane := range taskLanes {
+func NewView(mode Mode, execute func(string), focusLane func(tview.Primitive)) *View {
+	columns := mode.columns()
+	v := &View{Flex: tview.NewFlex(), mode: mode, columns: columns, lane: columns[0], execute: execute, focusLane: focusLane}
+	for _, i := range v.columns {
 		v.lists[i] = widgets.NewRowList[Row]()
-		v.lists[i].SetTitleColor(lane.color)
+		v.lists[i].SetTitleColor(taskLanes[i].color)
 		v.lists[i].SetBorderPadding(0, 0, 3, 1)
 	}
 	v.layoutColumns()
@@ -33,7 +36,7 @@ func NewView(execute func(string), focusLane func(tview.Primitive)) *View {
 }
 
 func (v *View) Resize(width int) {
-	if narrow := width < 17*LaneCount; narrow != v.compact {
+	if narrow := width < 17*len(v.columns); narrow != v.compact {
 		v.compact = narrow
 		v.layoutColumns()
 	}
@@ -42,11 +45,15 @@ func (v *View) Resize(width int) {
 func (v *View) Lane() int                           { return v.lane }
 func (v *View) List(lane int) *widgets.RowList[Row] { return v.lists[lane] }
 
+func (v *View) Focus(delegate func(tview.Primitive)) {
+	delegate(v.lists[v.lane])
+}
+
 func (v *View) layoutColumns() {
 	v.Flex.Clear()
-	for i, l := range v.lists {
+	for _, i := range v.columns {
 		if !v.compact || i == v.lane {
-			v.Flex.AddItem(l, 0, 1, false)
+			v.Flex.AddItem(v.lists[i], 0, 1, false)
 		}
 	}
 }
@@ -58,8 +65,9 @@ func (v *View) SelectedCard() (board.Card, bool) {
 
 func (v *View) Render(cards []board.Card, projects []string, dir string) {
 	selected, _ := v.SelectedCard()
-	model := Build(cards, projects, dir, v.lane, selected.ID)
-	for lane, rows := range model.Rows {
+	model := v.mode.Build(cards, projects, dir, v.lane, selected.ID)
+	for _, lane := range v.columns {
+		rows := model.Rows[lane]
 		list := v.lists[lane]
 		if !slices.Equal(list.Rows(), rows) {
 			index := list.GetCurrentItem()
@@ -80,21 +88,24 @@ func (v *View) selectLane(lane int) {
 		// 入力欄や詳細画面を操作中でも、戻ったときに表示する列は更新する。
 		v.focusLane(v.lists[lane])
 	}
-	for i, list := range v.lists {
+	for _, i := range v.columns {
 		border := tcell.ColorDarkSlateGray
 		if i == v.lane {
 			border = taskLanes[i].color
 		}
-		list.SetBorderColor(border)
+		v.lists[i].SetBorderColor(border)
 	}
 }
 
 func (v *View) HandleKey(event *tcell.EventKey) bool {
 	switch event.Key() {
-	case tcell.KeyLeft:
-		v.selectLane((v.lane + len(taskLanes) - 1) % len(taskLanes))
-	case tcell.KeyRight:
-		v.selectLane((v.lane + 1) % len(taskLanes))
+	case tcell.KeyLeft, tcell.KeyRight:
+		step := 1
+		if event.Key() == tcell.KeyLeft {
+			step = -1
+		}
+		index := slices.Index(v.columns, v.lane)
+		v.selectLane(v.columns[(index+step+len(v.columns))%len(v.columns)])
 	case tcell.KeyEnter:
 		v.activateCard()
 	case tcell.KeyRune:
@@ -118,7 +129,9 @@ func (v *View) activateCard() {
 	action := "result"
 	switch c.Status {
 	case board.Todo:
-		action = "start"
+		if v.mode == Manual {
+			action = "start"
+		}
 	case board.Running:
 		action = "open"
 	}

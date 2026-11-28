@@ -34,3 +34,18 @@ func LaneFor(c board.Card) int {
 		return -1
 	}
 }
+
+func (mode Mode) laneFor(c board.Card) int {
+	scheduled := c.SourceScheduleID() > 0
+	if scheduled != (mode == RunHistory) {
+		return -1
+	}
+	lane := LaneFor(c)
+	if mode == RunHistory {
+		switch lane {
+		case Todo, Design, DesignComplete, Review:
+			return Work
+		}
+	}
+	return lane
+}

@@ -20,7 +20,8 @@ type boardUI struct {
 	store                         store.Store
 	herdr                         string
 	pages                         *tview.Pages
-	tasks                         *taskboard.View
+	tasks, history                *taskboard.View
+	showHistory                   bool
 	agents                        *agentlist.List
 	schedules                     *automation.List
 	header, context, hint, notice *tview.TextView
@@ -54,11 +55,8 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 		footer:  tview.NewPages(),
 	}
 	u.schedules = u.newScheduleList()
-	u.tasks = taskboard.NewView(u.execute, func(list tview.Primitive) {
-		if u.activePage() == u.tabs[taskTab].page {
-			u.app.SetFocus(list)
-		}
-	})
+	u.tasks = taskboard.NewView(taskboard.Manual, u.execute, u.focusBoardLane("tasks"))
+	u.history = taskboard.NewView(taskboard.RunHistory, u.execute, u.focusBoardLane("history"))
 	u.agents = agentlist.NewList(u.focusAgent)
 	u.detail = detail.NewView(u.schedules.ByID, func(hint string) { u.hint.SetText(hint) })
 	u.registerTabs()
@@ -71,10 +69,19 @@ func newBoardUI(s store.Store, herdr string) *boardUI {
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		width, _ := screen.Size()
 		u.tasks.Resize(width)
+		u.history.Resize(width)
 		return false
 	})
 	u.switchView()
 	return u
+}
+
+func (u *boardUI) focusBoardLane(page string) func(tview.Primitive) {
+	return func(list tview.Primitive) {
+		if u.activePage() == page {
+			u.app.SetFocus(list)
+		}
+	}
 }
 
 // Run は指定された端末画面でボードの更新と入力受付を開始する。
