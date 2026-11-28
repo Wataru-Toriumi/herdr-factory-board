@@ -14,6 +14,7 @@ var taskAgents = [...]string{board.Codex, board.Claude}
 
 type Form struct {
 	*tview.Form
+	Prompt                    *tview.TextArea
 	Project                   string
 	agent                     *tview.DropDown
 	save, pickProject, cancel func()
@@ -26,7 +27,7 @@ func NewForm(project string, submit func(prompt, agent string), pickProject, can
 		agent.AddOption(board.AgentLabel(id), nil)
 	}
 	agent.SetCurrentOption(0)
-	f := &Form{Form: tview.NewForm(), Project: project, agent: agent, pickProject: pickProject, cancel: cancel}
+	f := &Form{Form: tview.NewForm(), Prompt: prompt, Project: project, agent: agent, pickProject: pickProject, cancel: cancel}
 	f.save = func() {
 		index, _ := agent.GetCurrentOption()
 		submit(strings.TrimSpace(prompt.GetText()), taskAgents[index])

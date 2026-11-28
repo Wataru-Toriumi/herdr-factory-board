@@ -28,9 +28,10 @@ func (u *boardUI) openScheduleForm(r schedule.Rule, kind string) {
 		u.saveScheduleForm(r, kind, values)
 	}, closeForm, u.showWorkDir)
 	u.scheduleForm = form
+	u.addVoiceButton(form.Form, form.Prompt)
 	u.pages.AddAndSwitchToPage("schedule-form", form, true)
 	u.notice.SetText("")
-	u.hint.SetText(automation.FormHint)
+	u.hint.SetText(u.voiceHint(automation.FormHint))
 	u.showWorkDir()
 	u.app.EnablePaste(true).SetFocus(form)
 }

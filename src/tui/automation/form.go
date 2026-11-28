@@ -18,6 +18,7 @@ type Settings struct {
 
 type Form struct {
 	*tview.Form
+	Prompt                     *tview.TextArea
 	dir, agent                 string
 	save, cancel, agentChanged func()
 }
@@ -31,6 +32,7 @@ func NewForm(r schedule.Rule, kind string, submit func(Settings), cancel, agentC
 	prompt := tview.NewTextArea().SetLabel("実行内容").SetSize(6, 0).SetText(r.Prompt, true)
 	f := &Form{
 		Form:         tview.NewForm(),
+		Prompt:       prompt,
 		dir:          r.Dir,
 		agent:        r.Agent,
 		cancel:       cancel,

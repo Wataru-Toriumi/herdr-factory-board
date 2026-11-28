@@ -5,7 +5,7 @@
 ```sh
 mise trust
 mise install
-go build -o factory-board ./src
+mise run build
 ```
 
 プラグインのビルドと各ペインの起動コマンドは [herdr-plugin.toml](../herdr-plugin.toml) で定義しています。コードを変更したら、テストと lint を実行し、再ビルドしてペインを開き直してください。

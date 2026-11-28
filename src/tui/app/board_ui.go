@@ -4,6 +4,7 @@ package app
 import (
 	"context"
 
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/dictation"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/herdr"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
@@ -32,6 +33,8 @@ type boardUI struct {
 	editor                        inputSession
 	scheduleForm                  *automation.Form
 	taskForm                      *taskboard.Form
+	voice                         *voiceDialog
+	voiceHelper                   string
 	projects                      []string
 	board                         boardSnapshot
 	panes                         []herdr.Pane
@@ -43,16 +46,17 @@ type boardUI struct {
 
 func newBoardUI(s store.Store, herdr string) *boardUI {
 	u := &boardUI{
-		app:     tview.NewApplication(),
-		store:   s,
-		herdr:   herdr,
-		pages:   tview.NewPages(),
-		header:  tview.NewTextView().SetDynamicColors(true),
-		context: tview.NewTextView().SetWrap(false),
-		notice:  tview.NewTextView().SetWrap(false),
-		hint:    tview.NewTextView().SetWrap(false),
-		input:   tview.NewInputField().SetLabel("> "),
-		footer:  tview.NewPages(),
+		app:         tview.NewApplication(),
+		voiceHelper: dictation.HelperPath(),
+		store:       s,
+		herdr:       herdr,
+		pages:       tview.NewPages(),
+		header:      tview.NewTextView().SetDynamicColors(true),
+		context:     tview.NewTextView().SetWrap(false),
+		notice:      tview.NewTextView().SetWrap(false),
+		hint:        tview.NewTextView().SetWrap(false),
+		input:       tview.NewInputField().SetLabel("> "),
+		footer:      tview.NewPages(),
 	}
 	u.schedules = u.newScheduleList()
 	u.tasks = taskboard.NewView(taskboard.Manual, u.execute, u.focusBoardLane("tasks"))
@@ -96,6 +100,11 @@ func Run(s store.Store, herdr string, screen tcell.Screen) error {
 func (u *boardUI) run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	defer func() {
+		if u.voice != nil {
+			u.voice.session.Cancel()
+		}
+	}()
 	u.refresh()
 	go u.poll(ctx)
 	return u.app.Run()
@@ -118,7 +127,7 @@ func (u *boardUI) showWorkDir() {
 	case "schedule-form":
 		u.context.SetText(u.scheduleForm.Context())
 		return
-	case "directory":
+	case "directory", "dictation":
 		return
 	}
 	if u.tab == agentTab {

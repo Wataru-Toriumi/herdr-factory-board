@@ -12,9 +12,27 @@ func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		return event
+	case "dictation":
+		switch key {
+		case tcell.KeyEscape:
+			u.finishVoiceInput("", nil)
+		case tcell.KeyCtrlR:
+			u.stopVoiceInput()
+		default:
+			return event
+		}
+		return nil
 	case "task-form":
+		if key == tcell.KeyCtrlR && u.voiceHelper != "" {
+			u.openVoiceInput(u.taskForm.Form, u.taskForm.Prompt)
+			return nil
+		}
 		return u.taskForm.HandleKey(event)
 	case "schedule-form":
+		if key == tcell.KeyCtrlR && u.voiceHelper != "" {
+			u.openVoiceInput(u.scheduleForm.Form, u.scheduleForm.Prompt)
+			return nil
+		}
 		return u.scheduleForm.HandleKey(event)
 	case "input":
 		return u.inputKey(event)
