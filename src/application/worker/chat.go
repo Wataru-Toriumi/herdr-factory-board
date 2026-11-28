@@ -14,14 +14,6 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
-// 相談の実行中だけ使う識別子。カードの作業フェーズには保存しない。
-const chatPhase = "chat"
-
-func chatPrompt(c board.Card) string {
-	return fmt.Sprintf("チケットについての相談です。作業先を読み取り専用で調査し、最後の質問に日本語で回答してください。実装やファイル変更は行わないでください。\n\n元の依頼\n%s\n\nカードの状態\n%s\n\n設計案\n%s\n\n実行結果\n%s\n\nこれまでの会話\n%s\n\n今回の質問\n%s",
-		c.Prompt, c.Status, c.Design, c.Result, c.Discussion(), c.Chat[len(c.Chat)-1].Question)
-}
-
 // 質問を先に保存し、同じチケットの排他ロックを応答プロセスに引き継ぐ。
 func SendChat(s store.Store, seen board.Card, question string) error {
 	question = strings.TrimSpace(question)
@@ -125,13 +117,11 @@ func RunChatReply(s store.Store, args []string) error {
 	if err := file.Close(); err != nil {
 		return finishChat(s, id, turn, board.Failed, err.Error())
 	}
-	task := *c
 	// 別のペインで作業先を変更しても、送信時のプロジェクトで回答する。
-	task.Dir, err = os.Getwd()
+	dir, err := os.Getwd()
 	if err != nil {
 		return finishChat(s, id, turn, board.Failed, err.Error())
 	}
-	task.Agent, task.Phase = task.Chat[turn-1].Agent, chatPhase
-	status, answer := runAgent(context.Background(), task, lock, file.Name())
+	status, answer := runAgent(context.Background(), chatRequest(*c, dir), lock, file.Name())
 	return finishChat(s, id, turn, status, answer)
 }

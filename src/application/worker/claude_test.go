@@ -52,7 +52,7 @@ esac
 				t.Fatal(err)
 			}
 			defer lock.Close()
-			status, result := runAgent(context.Background(), task, lock, "")
+			status, result := runAgent(context.Background(), taskRequest(task), lock, "")
 			if status != tc.status || !strings.Contains(result, tc.result) {
 				t.Fatalf("状態 = %q, 結果 = %q", status, result)
 			}
