@@ -16,7 +16,7 @@ func (u *boardUI) pickDefaultAgent() {
 	dialog := tview.NewModal().
 		SetText("このワークスペースで新しいタスク・予定に使う既定の担当").
 		AddButtons(labels).
-		SetFocus(slices.Index(agents, u.board.state.AgentForNewItem("")))
+		SetFocus(slices.Index(agents, u.board.state.EffectiveDefaultAgent()))
 	dialog.SetDoneFunc(func(index int, _ string) {
 		u.pages.RemovePage("default-agent")
 		u.switchView()

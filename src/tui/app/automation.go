@@ -20,7 +20,7 @@ func (u *boardUI) newScheduleList() *automation.List {
 
 func (u *boardUI) newScheduleForm(kind string) {
 	u.selectScheduleProject(func(dir string) {
-		u.openScheduleForm(schedule.Rule{Dir: dir, Agent: u.board.state.AgentForNewItem("")}, kind)
+		u.openScheduleForm(schedule.Rule{Dir: dir, Agent: u.board.state.EffectiveDefaultAgent()}, kind)
 	})
 }
 
