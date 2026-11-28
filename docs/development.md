@@ -8,7 +8,31 @@ mise install
 go build -o factory-board ./src
 ```
 
-プラグインのビルドと各ペインの起動コマンドは [herdr-plugin.toml](../herdr-plugin.toml) で定義しています。コードを変更したら、`go test ./...` で全パッケージをテストし、再ビルドしてペインを開き直してください。
+プラグインのビルドと各ペインの起動コマンドは [herdr-plugin.toml](../herdr-plugin.toml) で定義しています。コードを変更したら、テストと lint を実行し、再ビルドしてペインを開き直してください。
+
+## テストと lint
+
+`mise run test` で race 検出付きの全テスト、`mise run lint` で golangci-lint による静的解析を実行できます。CI は PR の作成・更新と `main` への push を対象に、Linux と macOS でテスト、Linux で lint を実行します。[CI の設定](../.github/workflows/ci.yml)
+
+## リリースノートを公開する
+
+リリースするバージョンを `herdr-plugin.toml` に設定して `main` に取り込みます。そのコミットに付けた `vX.Y.Z` 形式のタグを push すると、CI の全検査に通った後に GitHub Release が公開されます。リリースノートには前回のリリース以降にマージした PR が載ります。[リリースの設定](../.github/workflows/release.yml)
+
+たとえば初回の `v0.1.0` なら、先に GitHub CLI で本文をプレビューできます。このコマンドでタグや Release は作成されません。
+
+```sh
+gh api --method POST 'repos/{owner}/{repo}/releases/generate-notes' \
+  -f tag_name=v0.1.0 -f target_commitish=main --jq .body
+```
+
+公開するときはローカルの `main` を更新し、対象のコミットにタグを付けて送ります。
+
+```sh
+git switch main
+git pull --ff-only
+git tag -a v0.1.0 -m 'v0.1.0'
+git push origin refs/tags/v0.1.0
+```
 
 ## レイヤーと依存方向
 

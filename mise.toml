@@ -1,2 +1,11 @@
 [tools]
 go = "1.27.3"
+
+[tasks.test]
+description = "race 検出を有効にして全パッケージをテストする"
+run = "go test -race -count=1 ./..."
+
+[tasks.lint]
+description = "Go の静的解析を実行する"
+tools = { golangci-lint = "2.15.0" }
+run = "golangci-lint run ./..."

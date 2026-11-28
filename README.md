@@ -10,6 +10,7 @@ Herdr TUI で作業をカードにして Codex または Claude Code に渡す�
 - [ボードの操作とカードの実行](docs/board.md)
 - [定期実行](docs/automation.md)
 - [開発環境とコードの構成](docs/development.md)
+- [リリースノート](https://github.com/Wataru-Toriumi/herdr-factory-board/releases)
 
 ## ライセンス
 
