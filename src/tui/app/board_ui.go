@@ -12,6 +12,7 @@ import (
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/automation"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/detail"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/reviewlist"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/terminal"
 	"github.com/gdamore/tcell/v2"
@@ -24,6 +25,10 @@ type boardUI struct {
 	herdr                         string
 	pages                         *tview.Pages
 	tasks, history                *taskboard.View
+	reviews                       *reviewlist.List
+	reviewRequests                chan string
+	reviewBusy                    bool
+	reviewStatus                  string
 	showHistory                   bool
 	agents                        *agentlist.List
 	schedules                     *automation.List
@@ -49,20 +54,22 @@ type boardUI struct {
 
 func newBoardUI(s store.Store, herdr string) *boardUI {
 	u := &boardUI{
-		app:         tview.NewApplication(),
-		voiceHelper: dictation.HelperPath(),
-		store:       s,
-		herdr:       herdr,
-		pages:       tview.NewPages(),
-		header:      tview.NewTextView().SetDynamicColors(true),
-		context:     tview.NewTextView().SetWrap(false),
-		notice:      tview.NewTextView().SetWrap(false),
-		hint:        tview.NewTextView().SetWrap(false),
-		input:       tview.NewInputField().SetLabel("> "),
-		footer:      tview.NewPages(),
+		app:            tview.NewApplication(),
+		reviewRequests: make(chan string, 1),
+		voiceHelper:    dictation.HelperPath(),
+		store:          s,
+		herdr:          herdr,
+		pages:          tview.NewPages(),
+		header:         tview.NewTextView().SetDynamicColors(true),
+		context:        tview.NewTextView().SetWrap(false),
+		notice:         tview.NewTextView().SetWrap(false),
+		hint:           tview.NewTextView().SetWrap(false),
+		input:          tview.NewInputField().SetLabel("> "),
+		footer:         tview.NewPages(),
 	}
 	u.schedules = u.newScheduleList()
 	u.tasks = taskboard.NewView(taskboard.Manual, u.execute, u.focusBoardLane("tasks"))
+	u.reviews = reviewlist.New(func() { u.requestReview("") }, u.requestReview)
 	u.history = taskboard.NewView(taskboard.RunHistory, u.execute, u.focusBoardLane("history"))
 	u.agents = agentlist.NewList(u.focusAgent)
 	u.detail = detail.NewView(u.schedules.ByID, func(hint string) { u.hint.SetText(hint) })
@@ -110,6 +117,7 @@ func (u *boardUI) run() error {
 	}()
 	u.refresh()
 	go u.poll(ctx)
+	go u.processReviews(ctx)
 	return u.app.Run()
 }
 
@@ -124,6 +132,9 @@ func (u *boardUI) activePage() string {
 
 func (u *boardUI) showWorkDir() {
 	switch u.activePage() {
+	case "reviews":
+		u.context.SetText(tview.Escape(u.reviewStatus))
+		return
 	case "chat":
 		c := u.detail.Card()
 		u.context.SetText(fmt.Sprintf("#%d  元の依頼: %s", c.ID, strings.Join(strings.Fields(c.Prompt), " ")))

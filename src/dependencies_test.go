@@ -88,6 +88,10 @@ func TestPackageDependencies(t *testing.T) {
 				if localImport && packageLayer(target) != "domain" && !usesPaneTypes && !usesWidgets {
 					t.Errorf("%s → %s: 表示用パッケージの依存範囲外です", name, target)
 				}
+			case "src/tui/reviewlist":
+				if localImport && target != "src/tui/widgets" && target != "src/infrastructure/github" {
+					t.Errorf("%s → %s: レビュー依頼一覧の依存範囲外です", name, target)
+				}
 			case "src/tui/projectpicker":
 				if localImport && target != "src/tui/widgets" {
 					t.Errorf("%s → %s: 作業先選択が参照できるモジュール内パッケージは widgets だけです", name, target)
@@ -106,7 +110,7 @@ func TestPackageDependencies(t *testing.T) {
 				}
 			}
 			tuiLibrary := strings.HasPrefix(dep+"/", "github.com/rivo/tview/") || strings.HasPrefix(dep+"/", "github.com/gdamore/tcell/v2/")
-			if tuiLibrary && !slices.Contains([]string{"src/tui", "src/tui/app", "src/tui/terminal", "src/tui/projectpicker", "src/tui/widgets", "src/tui/automation", "src/tui/taskboard", "src/tui/agentlist", "src/tui/detail"}, name) {
+			if tuiLibrary && !slices.Contains([]string{"src/tui", "src/tui/app", "src/tui/reviewlist", "src/tui/terminal", "src/tui/projectpicker", "src/tui/widgets", "src/tui/automation", "src/tui/taskboard", "src/tui/agentlist", "src/tui/detail"}, name) {
 				t.Errorf("%s → %s: 画面ライブラリを利用できないパッケージです", name, dep)
 			}
 		}

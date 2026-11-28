@@ -130,6 +130,7 @@ func TestTabNavigationRestoresPageHintAndFocus(t *testing.T) {
 		focus             tview.Primitive
 	}{
 		{tcell.KeyTab, "agents", "エージェント", "Enter ペインへ", u.agents},
+		{tcell.KeyTab, "reviews", "レビュー", "Enter GitHubで開く", u.reviews},
 		{tcell.KeyTab, "automation", "自動化", "i 間隔", u.schedules},
 		{tcell.KeyTab, "tasks", "タスク", "v 詳細", u.tasks.List(taskboard.Design)},
 		{tcell.KeyBacktab, "automation", "自動化", "i 間隔", u.schedules},

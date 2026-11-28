@@ -30,7 +30,7 @@ CI は PR の作成・更新時と `main` への push 時に、Linux と macOS �
 | --- | --- | --- |
 | `src/tui` | ボードの表示、タブ切り替え、キー入力、作業先の選択 | [tui](../src/tui) と各画面のパッケージ |
 | `src/application` | コマンドの実行、予定の登録と起動、カードの実行・キャンセル・復旧 | [command](../src/application/command)、[scheduler](../src/application/scheduler)、[worker](../src/application/worker) |
-| `src/infrastructure` | ワークスペースごとの `board.json` の読み書きとロック、Herdr CLI によるペイン操作 | [store](../src/infrastructure/store)、[herdr](../src/infrastructure/herdr) |
+| `src/infrastructure` | ワークスペースごとの `board.json` の読み書きとロック、Herdr CLI によるペイン操作、GitHub CLI による PR の取得・表示 | [github](../src/infrastructure/github)、 [store](../src/infrastructure/store)、[herdr](../src/infrastructure/herdr) |
 | `src/domain` | カードの状態と設計・レビューの条件、定期実行の時刻判定と次回時刻の計算 | [board](../src/domain/board)、[schedule](../src/domain/schedule) |
 
 たとえば `every 15m` の入力は、TUI から `command` を経て `scheduler` に届きます。`scheduler` は `schedule` で間隔を設定し、`store` で保存します。画面更新時は TUI が `store` からボードを、`herdr` からペイン一覧を直接読み取ります。
@@ -43,6 +43,7 @@ CI は PR の作成・更新時と `main` への push 時に、Linux と macOS �
 | --- | --- |
 | [taskboard](../src/tui/taskboard) | レーンとカードの描画、画面幅に応じた列数、選択の追従、カードのキー操作、新規タスクフォーム |
 | [agentlist](../src/tui/agentlist) | エージェント一覧、入力待ちの並び順と件数、担当ペインを開く操作 |
+| [reviewlist](../src/tui/reviewlist) | GitHub のレビュー依頼一覧、選んだ PR を開く操作 |
 | [detail](../src/tui/detail) | カードと元の予定の詳細、更新時の再描画、状態に応じたショートカットと操作案内 |
 | [automation](../src/tui/automation) | 予定一覧、プロジェクトの絞り込み、稼働状態の表示、登録・編集フォームと時刻入力 |
 | [projectpicker](../src/tui/projectpicker) | 作業先一覧、フォルダ移動、新しい作業先の選択 |
@@ -57,11 +58,12 @@ CI は PR の作成・更新時と `main` への push 時に、Linux と macOS �
 | `schedule`、`herdr` | 標準ライブラリのみ |
 | `taskboard`、`automation` | モジュール内では `domain` 配下と `widgets` |
 | `agentlist` | モジュール内では `domain` 配下、`widgets`、ペイン・ワークスペースの型を持つ `infrastructure/herdr` |
+| `reviewlist` | モジュール内では `infrastructure/github` と `widgets` |
 | `detail` | モジュール内では `domain` 配下のみ |
 | `projectpicker` | モジュール内では `widgets` のみ |
 | `widgets`、`terminal` | モジュール内の他パッケージへの依存なし |
 
-画面ライブラリの `tview` と `tcell/v2` を直接 import できるのは、起動入口の `tui`、`app`、上の「TUI の構成」にある5つの画面パッケージ、`widgets`、`terminal` です。全テストは `go test ./...`、依存関係だけなら `go test -count=1 -run '^TestPackageDependencies$' ./src` で確認できます。
+画面ライブラリの `tview` と `tcell/v2` を直接 import できるのは、起動入口の `tui`、`app`、上の「TUI の構成」にある画面パッケージ、`widgets`、`terminal` です。全テストは `go test ./...`、依存関係だけなら `go test -count=1 -run '^TestPackageDependencies$' ./src` で確認できます。
 
 ## リリースノートを公開する
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/agentlist"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/automation"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/reviewlist"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/tui/taskboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -14,6 +15,7 @@ import (
 const (
 	taskTab = iota
 	agentTab
+	reviewTab
 	automationTab
 )
 
@@ -29,6 +31,8 @@ func (u *boardUI) registerTabs() {
 			hint: taskboard.ListHint},
 		agentTab: {page: "agents", label: "エージェント", body: u.agents, handleKey: u.agents.HandleKey,
 			hint: agentlist.ListHint},
+		reviewTab: {page: "reviews", label: "レビュー", body: u.reviews, handleKey: u.reviews.HandleKey,
+			hint: reviewlist.ListHint},
 		automationTab: {page: "automation", label: "自動化", body: u.schedules, handleKey: u.schedules.HandleKey,
 			hint: "h 実行履歴  " + automation.ListHint},
 	}
@@ -53,6 +57,9 @@ func (u *boardUI) switchView() {
 	tab := u.currentView()
 	u.pages.SwitchToPage(tab.page)
 	u.app.SetFocus(tab.body)
+	if u.tab == reviewTab {
+		u.requestReview("")
+	}
 	u.hint.SetText(tab.hint + "  Ctrl+G 既定の担当")
 	u.updateHeader()
 	u.showWorkDir()
