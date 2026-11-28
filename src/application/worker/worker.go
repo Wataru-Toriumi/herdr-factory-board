@@ -49,7 +49,7 @@ func Run(s store.Store) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go watchCardCancellation(ctx, cancel, s, task)
-	status, result := runAgent(ctx, task, lock, resultPath)
+	status, result := runAgent(ctx, taskRequest(task), lock, resultPath)
 	return s.EditCard(id, func(c *board.Card) error {
 		c.FinishAttempt(task.Attempt, task.Phase, status, result)
 		return nil
