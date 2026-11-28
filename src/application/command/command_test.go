@@ -3,8 +3,10 @@ package command
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/board"
+	"github.com/Wataru-Toriumi/herdr-factory-board/src/domain/schedule"
 	"github.com/Wataru-Toriumi/herdr-factory-board/src/infrastructure/store"
 )
 
@@ -45,4 +47,36 @@ func TestDailyCommandSavesBeforeSchedulerLaunch(t *testing.T) {
 	if r.Time != "09:00" || r.Prompt != "朝のタスク" || r.Dir != s.Dir {
 		t.Fatalf("登録内容: %+v", r)
 	}
+}
+
+func TestDefaultAgentForCommandsAndLegacySchedule(t *testing.T) {
+	s := store.Store{Dir: t.TempDir()}
+	if err := s.Edit(func(b *board.State) error {
+		b.NewCard("以前のカード", s.Dir, "")
+		b.AddSchedule(schedule.Rule{Time: "00:00", Prompt: "以前の予定", Dir: s.Dir})
+		b.DefaultAgent = board.Claude
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range []string{"add 新規カード", "daily 09:00 朝のタスク", "every 15m 差分確認"} {
+		if _, err := Parse(line).Run(s, "true", s.Dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b, err := s.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Cards[0].Agent != "" || b.Schedules[0].Agent != "" || b.Cards[1].Agent != board.Claude ||
+		b.Schedules[1].Agent != board.Claude || b.Schedules[2].Agent != board.Claude {
+		t.Fatalf("新規登録後の担当: %+v", b)
+	}
+	b.RecordDueSchedules(time.Now().AddDate(0, 0, 1))
+	for _, c := range b.Cards[2:] {
+		if c.ScheduleID == b.Schedules[0].ID && board.AgentLabel(c.Agent) == "Codex" {
+			return
+		}
+	}
+	t.Fatal("既存の予定からCodexのカードが生成されませんでした")
 }

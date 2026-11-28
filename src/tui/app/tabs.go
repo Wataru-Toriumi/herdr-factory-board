@@ -53,7 +53,7 @@ func (u *boardUI) switchView() {
 	tab := u.currentView()
 	u.pages.SwitchToPage(tab.page)
 	u.app.SetFocus(tab.body)
-	u.hint.SetText(tab.hint)
+	u.hint.SetText(tab.hint + "  Ctrl+G 既定の担当")
 	u.updateHeader()
 	u.showWorkDir()
 }

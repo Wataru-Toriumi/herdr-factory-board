@@ -38,7 +38,7 @@ func (cmd Command) Run(s store.Store, herdr, dir string) (*board.Card, error) {
 			if dir == "" {
 				return errors.New("先に dir で作業先を指定してください")
 			}
-			b.NewCard(arg, dir, "").Agent = cmd.Agent
+			b.NewCard(arg, dir, "").Agent = b.AgentForNewItem(cmd.Agent)
 			return nil
 		})
 	case schedule.Daily, schedule.Every:

@@ -14,6 +14,7 @@ func (u *boardUI) newTaskForm() {
 		u.notice.SetText("")
 		u.closeTaskForm()
 	})
+	u.taskForm.SelectAgent(u.board.state.EffectiveDefaultAgent())
 	u.addVoiceButton(u.taskForm.Form, u.taskForm.Prompt)
 	u.pages.AddAndSwitchToPage("task-form", u.taskForm, true)
 	u.notice.SetText("")

@@ -31,6 +31,7 @@ func RegisterRule(s store.Store, herdrBin string, rule schedule.Rule, kind, when
 		if err := rule.SetTiming(kind, when, time.Now()); err != nil {
 			return err
 		}
+		rule.Agent = b.AgentForNewItem(rule.Agent)
 		id = b.AddSchedule(rule)
 		return nil
 	}); err != nil {
