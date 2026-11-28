@@ -1,0 +1,17 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  settings:
+    staticcheck:
+      checks: ["SA*", "S1*"]
+  exclusions:
+    rules:
+      # 端末の貼り付けテストは別の goroutine からイベントを順に送り、入力待ちを再現する。
+      - path: 'src/tui/app/(automation|task_form)_test\.go'
+        linters: [staticcheck]
+        text: 'SA1019: .*PostEventWait'
