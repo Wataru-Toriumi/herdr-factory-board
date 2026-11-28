@@ -5,6 +5,15 @@ import "github.com/gdamore/tcell/v2"
 func (u *boardUI) key(event *tcell.EventKey) *tcell.EventKey {
 	key := event.Key()
 	switch u.activePage() {
+	case "review-diff":
+		if key == tcell.KeyEscape {
+			u.cancelReviewDiff()
+			u.cancelReviewDiff = nil
+			u.pages.RemovePage("review-diff")
+			u.switchView()
+			return nil
+		}
+		return event
 	case "default-agent":
 		return event
 	case "directory":
